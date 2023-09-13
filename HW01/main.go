@@ -11,11 +11,18 @@ func main() {
 	forkThreeCommunication := make(chan string) // Fork between philosofer 3 and 4
 	forkFourCommunication := make(chan string)  // Fork between philosofer 4 and 5
 	forkFiveCommunication := make(chan string)  // Fork between philosofer 5 and 1
-	forkOne := Fork{false, forkOneCommunication}
-	forkTwo := Fork{false, forkTwoCommunication}
-	forkThree := Fork{false, forkThreeCommunication}
-	forkFour := Fork{false, forkFourCommunication}
-	forkFive := Fork{false, forkFiveCommunication}
+
+	ForkOneDone := make(chan string)   // Fork between philosofer 1 and 2
+	ForkTwoDone := make(chan string)   // Fork between philosofer 2 and 3
+	ForkThreeDone := make(chan string) // Fork between philosofer 3 and 4
+	ForkFourDone := make(chan string)  // Fork between philosofer 4 and 5
+	ForkFiveDone := make(chan string)  // Fork between philosofer 5 and 1
+
+	forkOne := Fork{forkOneCommunication, ForkOneDone}
+	forkTwo := Fork{forkTwoCommunication, ForkTwoDone}
+	forkThree := Fork{forkThreeCommunication, ForkThreeDone}
+	forkFour := Fork{forkFourCommunication, ForkFourDone}
+	forkFive := Fork{forkFiveCommunication, ForkFiveDone}
 
 	go forkmain(forkOne)
 	go forkmain(forkTwo)
@@ -23,16 +30,22 @@ func main() {
 	go forkmain(forkFour)
 	go forkmain(forkFive)
 
-	philOne := Philosopher{"One", false, forkOneCommunication, forkFiveCommunication, 0}
-	philTwo := Philosopher{"Two", false, forkTwoCommunication, forkOneCommunication, 0}
-	philThree := Philosopher{"Three", false, forkThreeCommunication, forkTwoCommunication, 0}
-	philFour := Philosopher{"Four", false, forkFourCommunication, forkThreeCommunication, 0}
-	PhilFive := Philosopher{"Five", false, forkFourCommunication, forkFiveCommunication, 0} // Loking the other way
-	go philOne.run()
-	go philTwo.run()
-	go philThree.run()
-	go philFour.run()
+	philOne := Philosopher{"One", false, forkOneCommunication, forkFiveCommunication, ForkOneDone, 0}
+	philTwo := Philosopher{"Two", false, forkTwoCommunication, forkOneCommunication, ForkTwoDone, 0}
+	philThree := Philosopher{"Three", false, forkThreeCommunication, forkTwoCommunication, ForkThreeDone, 0}
+	philFour := Philosopher{"Four", false, forkFourCommunication, forkThreeCommunication, ForkFourDone, 0}
+	PhilFive := Philosopher{"Five", false, forkFourCommunication, forkFiveCommunication, ForkFiveDone, 0} // Loking the other way
+
 	go PhilFive.run()
+	time.Sleep(time.Second * 3)
+	go philOne.run()
+	time.Sleep(time.Second)
+	go philTwo.run()
+	time.Sleep(time.Second)
+	go philThree.run()
+	time.Sleep(time.Second)
+	go philFour.run()
+
 	i := 1
 	for i < 60 {
 		time.Sleep(time.Second * 1)
