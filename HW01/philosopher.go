@@ -1,5 +1,9 @@
 package main
 
+// Jerome Rahal - Jrah
+// Marius Stokkebro - Masto
+// Marius Thomsen - Mariu
+
 import (
 	"fmt"
 	"time"
@@ -10,15 +14,15 @@ type Philosopher struct {
 	eating                        bool
 	priorityFork, nonPriorityFork chan string // Determines preffered fork
 	prioReq, nonPrioReq           chan string // Telling the fork to announce it is being used
-	timesEaten                    int // Counter of times eaten
+	timesEaten                    int         // Counter of times eaten
 }
 
 func (p *Philosopher) run() {
-	var bucket string// Bucket used to empty channel contents
-	for p.timesEaten < 4 {// For loop ensuring every philosopher eats 3 times
+	var bucket string      // Bucket used to empty channel contents
+	for p.timesEaten < 4 { // For loop ensuring every philosopher eats 3 times
 		fmt.Printf("%s is thinking\n", p.name)
 		select {
-		case p.priorityFork <- "I want to eat":// Case: a philosopher attempts to eat if forks are available
+		case p.priorityFork <- "I want to eat": // Case: a philosopher attempts to eat if forks are available
 			p.prioReq <- p.name
 			p.nonPrioReq <- p.name
 			p.nonPriorityFork <- "%s is eating\n"
@@ -29,7 +33,7 @@ func (p *Philosopher) run() {
 			bucket = <-p.priorityFork
 			bucket = <-p.nonPriorityFork
 			time.Sleep(time.Millisecond * 500)
-		default:// Default: if case is unreachable a philosopher will think and try again after half a second
+		default: // Default: if case is unreachable a philosopher will think and try again after half a second
 			time.Sleep(time.Millisecond * 500)
 		}
 
