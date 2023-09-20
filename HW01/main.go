@@ -10,7 +10,7 @@ right or left where each philosopher EXCEPT ONE prefers left. Because every phil
 a deadlock will be prevented, the main reasson it gets prevented is due to our select statement which ensures that no channel gets blocked
 before both forks are available. To begin with only the lefthanded philosopher can eat, but this will create a domino effect affecting the entire
 table ensuring everyone gets a turn eating with only the forks that are available without any deadlock. */
-func main() {
+//func main() {
 	forkOneCommunication := make(chan string, 1)   // Fork between philosofer 1 and 2
 	forkTwoCommunication := make(chan string, 2)   // Fork between philosofer 2 and 3
 	forkThreeCommunication := make(chan string, 1) // Fork between philosofer 3 and 4
