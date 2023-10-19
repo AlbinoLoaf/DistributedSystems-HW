@@ -64,4 +64,8 @@ func (c *Server) AskForTime(ctx context.Context, in *proto.AskForTimeMessage) (*
 	return &proto.TimeMessage{Time: time.Now().String()}, nil
 }
 
-func (c *Server) BroadcastMessage(ctx context.Context, incomming *proto.PublishMessage)
+func (c *Server) BroadcastMessage(ctx context.Context, incomming *proto.PublishMessage) (*proto.Broadcast, error) {
+	var broadcastString string = "User " + strconv.Itoa(int(incomming.ClientId)) + " said " + incomming.Message + " at time Lamport time: 4"
+	log.Print(broadcastString)
+	return &proto.Broadcast{message: broadcastString}, nil
+}
