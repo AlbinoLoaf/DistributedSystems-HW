@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ChittyChat;
+
+option go_package = "grpc/proto";
+
+message PublishMessage {
+  int64 clientId = 1;
+  string message = 2;
+}
+
+message Broadcast{
+  string message = 1;
+}
+
+service BC{
+  rpc BroadcastMessage(PublishMessage) returns (Broadcast);
+}
+
+
+message AskForTimeMessage {
+  int64 clientId = 1;
+}
+message TimeMessage {
+  string serverName = 1;
+  string time = 2;
+}
+
+service TimeAsk {
+  rpc AskForTime(AskForTimeMessage) returns (TimeMessage);
+}
