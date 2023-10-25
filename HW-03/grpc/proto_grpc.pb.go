@@ -18,96 +18,13 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// BCClient is the client API for BC service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type BCClient interface {
-	BroadcastMessage(ctx context.Context, in *PublishMessage, opts ...grpc.CallOption) (*Broadcast, error)
-}
-
-type bCClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewBCClient(cc grpc.ClientConnInterface) BCClient {
-	return &bCClient{cc}
-}
-
-func (c *bCClient) BroadcastMessage(ctx context.Context, in *PublishMessage, opts ...grpc.CallOption) (*Broadcast, error) {
-	out := new(Broadcast)
-	err := c.cc.Invoke(ctx, "/ChittyChat.BC/BroadcastMessage", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// BCServer is the server API for BC service.
-// All implementations must embed UnimplementedBCServer
-// for forward compatibility
-type BCServer interface {
-	BroadcastMessage(context.Context, *PublishMessage) (*Broadcast, error)
-	mustEmbedUnimplementedBCServer()
-}
-
-// UnimplementedBCServer must be embedded to have forward compatible implementations.
-type UnimplementedBCServer struct {
-}
-
-func (UnimplementedBCServer) BroadcastMessage(context.Context, *PublishMessage) (*Broadcast, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BroadcastMessage not implemented")
-}
-func (UnimplementedBCServer) mustEmbedUnimplementedBCServer() {}
-
-// UnsafeBCServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to BCServer will
-// result in compilation errors.
-type UnsafeBCServer interface {
-	mustEmbedUnimplementedBCServer()
-}
-
-func RegisterBCServer(s grpc.ServiceRegistrar, srv BCServer) {
-	s.RegisterService(&BC_ServiceDesc, srv)
-}
-
-func _BC_BroadcastMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishMessage)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BCServer).BroadcastMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ChittyChat.BC/BroadcastMessage",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BCServer).BroadcastMessage(ctx, req.(*PublishMessage))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// BC_ServiceDesc is the grpc.ServiceDesc for BC service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var BC_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChittyChat.BC",
-	HandlerType: (*BCServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "BroadcastMessage",
-			Handler:    _BC_BroadcastMessage_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "grpc/proto.proto",
-}
-
 // UsermanagementClient is the client API for Usermanagement service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsermanagementClient interface {
+	SendMessage(ctx context.Context, in *PublishMessage, opts ...grpc.CallOption) (*Timestamp, error)
+	RequestChange(ctx context.Context, in *Timestamp, opts ...grpc.CallOption) (*Timestamp, error)
+	RequestBroadcast(ctx context.Context, in *Timestamp, opts ...grpc.CallOption) (*Broadcast, error)
 	LeaveClient(ctx context.Context, in *Client, opts ...grpc.CallOption) (*Confirmation, error)
 	ClientJoin(ctx context.Context, in *NewClient, opts ...grpc.CallOption) (*Client, error)
 }
@@ -118,6 +35,33 @@ type usermanagementClient struct {
 
 func NewUsermanagementClient(cc grpc.ClientConnInterface) UsermanagementClient {
 	return &usermanagementClient{cc}
+}
+
+func (c *usermanagementClient) SendMessage(ctx context.Context, in *PublishMessage, opts ...grpc.CallOption) (*Timestamp, error) {
+	out := new(Timestamp)
+	err := c.cc.Invoke(ctx, "/ChittyChat.Usermanagement/SendMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usermanagementClient) RequestChange(ctx context.Context, in *Timestamp, opts ...grpc.CallOption) (*Timestamp, error) {
+	out := new(Timestamp)
+	err := c.cc.Invoke(ctx, "/ChittyChat.Usermanagement/RequestChange", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usermanagementClient) RequestBroadcast(ctx context.Context, in *Timestamp, opts ...grpc.CallOption) (*Broadcast, error) {
+	out := new(Broadcast)
+	err := c.cc.Invoke(ctx, "/ChittyChat.Usermanagement/RequestBroadcast", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *usermanagementClient) LeaveClient(ctx context.Context, in *Client, opts ...grpc.CallOption) (*Confirmation, error) {
@@ -142,6 +86,9 @@ func (c *usermanagementClient) ClientJoin(ctx context.Context, in *NewClient, op
 // All implementations must embed UnimplementedUsermanagementServer
 // for forward compatibility
 type UsermanagementServer interface {
+	SendMessage(context.Context, *PublishMessage) (*Timestamp, error)
+	RequestChange(context.Context, *Timestamp) (*Timestamp, error)
+	RequestBroadcast(context.Context, *Timestamp) (*Broadcast, error)
 	LeaveClient(context.Context, *Client) (*Confirmation, error)
 	ClientJoin(context.Context, *NewClient) (*Client, error)
 	mustEmbedUnimplementedUsermanagementServer()
@@ -151,6 +98,15 @@ type UsermanagementServer interface {
 type UnimplementedUsermanagementServer struct {
 }
 
+func (UnimplementedUsermanagementServer) SendMessage(context.Context, *PublishMessage) (*Timestamp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+}
+func (UnimplementedUsermanagementServer) RequestChange(context.Context, *Timestamp) (*Timestamp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestChange not implemented")
+}
+func (UnimplementedUsermanagementServer) RequestBroadcast(context.Context, *Timestamp) (*Broadcast, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestBroadcast not implemented")
+}
 func (UnimplementedUsermanagementServer) LeaveClient(context.Context, *Client) (*Confirmation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LeaveClient not implemented")
 }
@@ -168,6 +124,60 @@ type UnsafeUsermanagementServer interface {
 
 func RegisterUsermanagementServer(s grpc.ServiceRegistrar, srv UsermanagementServer) {
 	s.RegisterService(&Usermanagement_ServiceDesc, srv)
+}
+
+func _Usermanagement_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsermanagementServer).SendMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ChittyChat.Usermanagement/SendMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsermanagementServer).SendMessage(ctx, req.(*PublishMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Usermanagement_RequestChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Timestamp)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsermanagementServer).RequestChange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ChittyChat.Usermanagement/RequestChange",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsermanagementServer).RequestChange(ctx, req.(*Timestamp))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Usermanagement_RequestBroadcast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Timestamp)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsermanagementServer).RequestBroadcast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ChittyChat.Usermanagement/RequestBroadcast",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsermanagementServer).RequestBroadcast(ctx, req.(*Timestamp))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Usermanagement_LeaveClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -213,6 +223,18 @@ var Usermanagement_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ChittyChat.Usermanagement",
 	HandlerType: (*UsermanagementServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendMessage",
+			Handler:    _Usermanagement_SendMessage_Handler,
+		},
+		{
+			MethodName: "RequestChange",
+			Handler:    _Usermanagement_RequestChange_Handler,
+		},
+		{
+			MethodName: "RequestBroadcast",
+			Handler:    _Usermanagement_RequestBroadcast_Handler,
+		},
 		{
 			MethodName: "LeaveClient",
 			Handler:    _Usermanagement_LeaveClient_Handler,

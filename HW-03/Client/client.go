@@ -2,6 +2,7 @@ package main
 
 import (
 	proto "ChittyChat/grpc"
+	"time"
 
 	"context"
 	"flag"
@@ -17,13 +18,13 @@ import (
 )
 
 type Client struct {
-	name       string
-	id         int64
-	portNumber int
+	name      string
+	id        int64
+	Timestamp int64
 }
 
 var (
-	clientPort = flag.Int("cPort", 0, "client port number")
+	//clientPort = flag.Int("cPort", 0, "client port number")
 	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
 	clientName = flag.String("n", " ", "Client name")
 )
@@ -32,9 +33,10 @@ func main() {
 	// Parse the flags to get the port for the client
 	flag.Parse()
 	c := &Client{}
-	c.CreateClient(*clientName, *clientPort)
+	c.CreateClient(*clientName)
 
 	// // Wait for the client (user) to ask for the time
+	go c.AwaitChange()
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		if strings.ToLower(scanner.Text()) == "leave" {
@@ -46,6 +48,7 @@ func main() {
 				os.Exit(0)
 			}
 		} else {
+
 			log.Printf("Publish: %s", scanner.Text())
 		}
 	}
@@ -54,6 +57,64 @@ func main() {
 	for {
 
 	}
+}
+
+func (c *Client) compareAndUpdate(serverConnection proto.UsermanagementClient) {
+	Server, err := serverConnection.RequestChange(context.Background(), &proto.Timestamp{
+		Time: c.Timestamp,
+	})
+	if err != nil {
+		log.Fatalf("Compare And update sad %v", err)
+	}
+	if Server.Time > c.Timestamp {
+		i := c.Timestamp + 1
+		for i <= Server.Time {
+			c.RequestEvent(i)
+			i++
+		}
+		c.Timestamp = Server.Time
+	}
+}
+
+func (c *Client) AwaitChange() {
+	serverConnection, err := connectToServer()
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+
+	}
+	for true {
+		time.Sleep(time.Millisecond * 1000)
+		c.compareAndUpdate(serverConnection)
+	}
+
+}
+
+func (c *Client) Publish(message string) {
+	serverConnection, err := connectToServer()
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+
+	}
+	c.compareAndUpdate(serverConnection)
+	Server, err := serverConnection.SendMessage(context.Background(), &proto.PublishMessage{
+		Name:    c.name,
+		Message: message,
+		Id:      c.id,
+	})
+	c.Timestamp = Server.Time
+
+}
+
+func (c *Client) RequestEvent(wantedEvent int64) {
+	serverConnection, err := connectToServer()
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+
+	}
+	Event, err := serverConnection.RequestBroadcast(context.Background(), &proto.Timestamp{
+		Time: wantedEvent,
+	})
+	log.Print(Event)
 }
 func (c *Client) leaveServer() error {
 	serverConnection, err := connectToServer()
@@ -73,7 +134,7 @@ func (c *Client) leaveServer() error {
 	}
 	return nil
 }
-func (c *Client) CreateClient(Inputname string, clientport int) {
+func (c *Client) CreateClient(Inputname string) {
 	serverConnection, err := connectToServer()
 	if err != nil {
 		log.Fatalf("User creation fallied: %v", err)
@@ -91,8 +152,7 @@ func (c *Client) CreateClient(Inputname string, clientport int) {
 
 	c.name = client.GetName()
 	c.id = client.GetId()
-	c.portNumber = clientport
-	//return returnClient, nil
+	c.Timestamp = client.GetTimestamp()
 }
 
 // func waitForTimeRequest(client *Client) {

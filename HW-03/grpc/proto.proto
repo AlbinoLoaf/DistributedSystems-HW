@@ -5,39 +5,37 @@ package ChittyChat;
 option go_package = "grpc/proto";
 
 message PublishMessage {
-  int64 clientId = 1;
+  string name = 1;
   string message = 2;
+  int64 id =3;
 }
 
 message Broadcast{
   string message = 1;
 }
 
-service BC{
-  rpc BroadcastMessage(PublishMessage) returns (Broadcast);
-}
-
-
-message AskForTimeMessage {
-  int64 clientId = 1;
-}
-
-
 message NewClient {
   string name = 1;
-  // int64 portnr =2;
 }
 message Client{
   string name = 1; 
   int64 id =2;
-  // int64 portnr =2;
+  int64 Timestamp = 3; 
 }
+
 
 message confirmation{
   bool Accept = 1;
 }
 
+message Timestamp{
+  int64 Time = 1;
+}
+
 service Usermanagement {
+  rpc SendMessage(PublishMessage) returns (Timestamp);
+  rpc RequestChange(Timestamp) returns (Timestamp);
+  rpc RequestBroadcast(Timestamp) returns (Broadcast); //triggered by RequestChange
   rpc LeaveClient(Client) returns (confirmation);
   rpc ClientJoin(NewClient) returns (Client);
 }

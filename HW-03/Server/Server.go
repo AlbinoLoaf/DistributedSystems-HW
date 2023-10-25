@@ -4,6 +4,7 @@ import (
 	proto "ChittyChat/grpc"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -16,6 +17,8 @@ type Server struct {
 	name                                    string
 	port                                    int
 	capacity                                []bool
+	log                                     []string
+	Timestamp                               int64
 }
 
 var port = flag.Int("port", 0, "server port number")
@@ -29,7 +32,9 @@ func main() {
 		name: "serverName",
 		port: *port,
 		// declare server capacity
-		capacity: make([]bool, 5),
+		capacity:  make([]bool, 5),
+		log:       make([]string, 1),
+		Timestamp: 1,
 	}
 
 	// Start the server
@@ -96,20 +101,36 @@ func (c *Server) LeaveClient(ctx context.Context, in *proto.Client) (*proto.Conf
 		log.Print("Couldn't delete Client")
 		return nil, nil
 	} else {
+		event := fmt.Sprintf("%s left the server what a looser", in.Name)
+		c.LogEvent(event)
 		return &proto.Confirmation{Accept: true}, nil
 	}
 
 }
+func (c *Server) SendMessage(ctx context.Context, in *proto.PublishMessage) (*proto.Timestamp, error) {
+	Message := fmt.Sprintf("%s was set at %d by %s", in.Message, c.Timestamp, in.Name)
+	c.LogEvent(Message)
+	return &proto.Timestamp{Time: c.Timestamp}, nil
+}
+
+func (c *Server) RequestChange(ctx context.Context, in *proto.Timestamp) (*proto.Timestamp, error) {
+	return &proto.Timestamp{Time: c.Timestamp}, nil
+}
+
+func (c *Server) LogEvent(Event string) {
+	c.log = append(c.log, Event)
+	c.Timestamp++
+}
 
 func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
 	var _id int64 = int64(GenerateId(c))
+	event := fmt.Sprintf("A new person have joined say hi to %s at time %d", in.Name, (c.Timestamp)) // Without ID
 	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)
-	return &proto.Client{Name: in.Name, Id: _id}, nil
+	c.LogEvent(event)
+	return &proto.Client{Name: in.Name, Id: _id, Timestamp: c.Timestamp - 1}, nil
 }
 
-func (c *Server) BroadcastMessage(ctx context.Context, incomming *proto.PublishMessage) (*proto.Broadcast, error) {
-	var broadcastString string = "User " + strconv.Itoa(int(incomming.ClientId)) + " said " + incomming.Message + " at time Lamport time: 4"
-	log.Print(broadcastString)
+func (c *Server) RequestBroadcast(ctx context.Context, in *proto.Timestamp) (*proto.Broadcast, error) {
 	//return &proto.Broadcast{message: broadcastString}, nil
-	return nil, nil
+	return &proto.Broadcast{Message: c.log[in.Time]}, nil
 }
