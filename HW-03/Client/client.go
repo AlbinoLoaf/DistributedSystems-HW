@@ -2,11 +2,9 @@ package main
 
 import (
 	proto "ChittyChat/grpc"
-	"bufio"
 	"context"
 	"flag"
 	"log"
-	"os"
 	"strconv"
 
 	"google.golang.org/grpc"
@@ -21,50 +19,62 @@ type Client struct {
 var (
 	clientPort = flag.Int("cPort", 0, "client port number")
 	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
+	clientName = flag.String("n", " ", "Client name")
 )
 
 func main() {
 	// Parse the flags to get the port for the client
 	flag.Parse()
-
-	// Create a client
-	client := &Client{
-		id:         1,
-		portNumber: *clientPort,
-	}
+	log.Printf("test %s", *clientName)
+	//log.Print("test")
+	CreateClient(*clientName)
 
 	// Wait for the client (user) to ask for the time
-	go waitForTimeRequest(client)
+
+	//go waitForTimeRequest(client)
 
 	for {
 
 	}
 }
-
-func waitForTimeRequest(client *Client) {
-	// Connect to the server
+func CreateClient(Inputname string) {
 	serverConnection, _ := connectToServer()
-
-	// Wait for input in the client terminal
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		input := scanner.Text()
-		log.Printf("Client asked for time with input: %s\n", input)
-
-		// Ask the server for the time
-		timeReturnMessage, err := serverConnection.AskForTime(context.Background(), &proto.AskForTimeMessage{
-			ClientId: int64(client.id),
-		})
-
-		if err != nil {
-			log.Printf(err.Error())
-		} else {
-			log.Printf("Server %s says the time is %s\n", timeReturnMessage.ServerName, timeReturnMessage.Time)
-		}
+	client, err := serverConnection.ClientJoin(context.Background(), &proto.NewClient{
+		Name: Inputname,
+	})
+	if err != nil {
+		log.Fatalf("User creation fallied: %v", err)
 	}
+	log.Printf(`
+	ClientName: %s 
+	ClientID: %s`, client.GetName(), client.GetId())
+
 }
 
-func connectToServer() (proto.TimeAskClient, error) {
+// func waitForTimeRequest(client *Client) {
+// 	// Connect to the server
+// 	serverConnection, _ := connectToServer()
+
+// 	// Wait for input in the client terminal
+// 	scanner := bufio.NewScanner(os.Stdin)
+// 	for scanner.Scan() {
+// 		input := scanner.Text()
+// 		log.Printf("Client asked for time with input: %s\n", input)
+
+// 		// Ask the server for the time
+// 		timeReturnMessage, err := serverConnection.NewClient(context.Background(), &proto.AskForTimeMessage{
+// 			ClientId: int64(client.id),
+// 		})
+
+// 		if err != nil {
+// 			log.Printf(err.Error())
+// 		} else {
+// 			log.Printf("Server %s says the time is %s\n", timeReturnMessage.ServerName, timeReturnMessage.Time)
+// 		}
+// 	}
+// }
+
+func connectToServer() (proto.UsermanagementClient, error) {
 	// Dial the server at the specified port.
 	conn, err := grpc.Dial("localhost:"+strconv.Itoa(*serverPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -72,5 +82,5 @@ func connectToServer() (proto.TimeAskClient, error) {
 	} else {
 		log.Printf("Connected to the server at port %d\n", *serverPort)
 	}
-	return proto.NewTimeAskClient(conn), nil
+	return proto.NewUsermanagementClient(conn), nil
 }

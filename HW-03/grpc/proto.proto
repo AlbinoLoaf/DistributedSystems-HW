@@ -21,11 +21,18 @@ service BC{
 message AskForTimeMessage {
   int64 clientId = 1;
 }
-message TimeMessage {
-  string serverName = 1;
-  string time = 2;
+
+
+message NewClient {
+  string name = 1;
+  // int64 portnr =2;
+}
+message Client{
+  string name = 1; 
+  int64 id =2;
+  // int64 portnr =2;
 }
 
-service TimeAsk {
-  rpc AskForTime(AskForTimeMessage) returns (TimeMessage);
+service Usermanagement {
+  rpc ClientJoin(NewClient) returns (Client);
 }

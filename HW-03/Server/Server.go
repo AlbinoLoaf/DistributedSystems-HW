@@ -7,15 +7,14 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
 type Server struct {
-	proto.UnimplementedTimeAskServer // Necessary
-	name                             string
-	port                             int
+	proto.UnimplementedUsermanagementServer // Necessary
+	name                                    string
+	port                                    int
 }
 
 var port = flag.Int("port", 0, "server port number")
@@ -52,20 +51,27 @@ func startServer(server *Server) {
 	log.Printf("Started server at port: %d\n", server.port)
 
 	// Register the grpc server and serve its listener
-	proto.RegisterTimeAskServer(grpcServer, server)
+	proto.RegisterUsermanagementServer(grpcServer, server)
 	serveError := grpcServer.Serve(listener)
 	if serveError != nil {
 		log.Fatalf("Could not serve listener")
 	}
 }
 
-func (c *Server) AskForTime(ctx context.Context, in *proto.AskForTimeMessage) (*proto.TimeMessage, error) {
-	log.Printf("Client asking with ID: %d is asing for time", in.ClientId)
-	return &proto.TimeMessage{Time: time.Now().String()}, nil
+// func (c *Server) AskForTime(ctx context.Context, in *proto.AskForTimeMessage) (*proto.TimeMessage, error) {
+// 	log.Printf("Client asking with ID: %d is asing for time", in.ClientId)
+// 	return &proto.TimeMessage{Time: time.Now().String()}, nil
+// }
+
+func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
+	var _id int64 = 1
+	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)
+	return &proto.Client{Name: in.Name, Id: _id}, nil
 }
 
 func (c *Server) BroadcastMessage(ctx context.Context, incomming *proto.PublishMessage) (*proto.Broadcast, error) {
 	var broadcastString string = "User " + strconv.Itoa(int(incomming.ClientId)) + " said " + incomming.Message + " at time Lamport time: 4"
 	log.Print(broadcastString)
-	return &proto.Broadcast{message: broadcastString}, nil
+	//return &proto.Broadcast{message: broadcastString}, nil
+	return nil, nil
 }

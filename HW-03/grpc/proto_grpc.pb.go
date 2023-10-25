@@ -104,86 +104,86 @@ var BC_ServiceDesc = grpc.ServiceDesc{
 	Metadata: "grpc/proto.proto",
 }
 
-// TimeAskClient is the client API for TimeAsk service.
+// UsermanagementClient is the client API for Usermanagement service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type TimeAskClient interface {
-	AskForTime(ctx context.Context, in *AskForTimeMessage, opts ...grpc.CallOption) (*TimeMessage, error)
+type UsermanagementClient interface {
+	ClientJoin(ctx context.Context, in *NewClient, opts ...grpc.CallOption) (*Client, error)
 }
 
-type timeAskClient struct {
+type usermanagementClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewTimeAskClient(cc grpc.ClientConnInterface) TimeAskClient {
-	return &timeAskClient{cc}
+func NewUsermanagementClient(cc grpc.ClientConnInterface) UsermanagementClient {
+	return &usermanagementClient{cc}
 }
 
-func (c *timeAskClient) AskForTime(ctx context.Context, in *AskForTimeMessage, opts ...grpc.CallOption) (*TimeMessage, error) {
-	out := new(TimeMessage)
-	err := c.cc.Invoke(ctx, "/ChittyChat.TimeAsk/AskForTime", in, out, opts...)
+func (c *usermanagementClient) ClientJoin(ctx context.Context, in *NewClient, opts ...grpc.CallOption) (*Client, error) {
+	out := new(Client)
+	err := c.cc.Invoke(ctx, "/ChittyChat.Usermanagement/ClientJoin", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// TimeAskServer is the server API for TimeAsk service.
-// All implementations must embed UnimplementedTimeAskServer
+// UsermanagementServer is the server API for Usermanagement service.
+// All implementations must embed UnimplementedUsermanagementServer
 // for forward compatibility
-type TimeAskServer interface {
-	AskForTime(context.Context, *AskForTimeMessage) (*TimeMessage, error)
-	mustEmbedUnimplementedTimeAskServer()
+type UsermanagementServer interface {
+	ClientJoin(context.Context, *NewClient) (*Client, error)
+	mustEmbedUnimplementedUsermanagementServer()
 }
 
-// UnimplementedTimeAskServer must be embedded to have forward compatible implementations.
-type UnimplementedTimeAskServer struct {
+// UnimplementedUsermanagementServer must be embedded to have forward compatible implementations.
+type UnimplementedUsermanagementServer struct {
 }
 
-func (UnimplementedTimeAskServer) AskForTime(context.Context, *AskForTimeMessage) (*TimeMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AskForTime not implemented")
+func (UnimplementedUsermanagementServer) ClientJoin(context.Context, *NewClient) (*Client, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClientJoin not implemented")
 }
-func (UnimplementedTimeAskServer) mustEmbedUnimplementedTimeAskServer() {}
+func (UnimplementedUsermanagementServer) mustEmbedUnimplementedUsermanagementServer() {}
 
-// UnsafeTimeAskServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to TimeAskServer will
+// UnsafeUsermanagementServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UsermanagementServer will
 // result in compilation errors.
-type UnsafeTimeAskServer interface {
-	mustEmbedUnimplementedTimeAskServer()
+type UnsafeUsermanagementServer interface {
+	mustEmbedUnimplementedUsermanagementServer()
 }
 
-func RegisterTimeAskServer(s grpc.ServiceRegistrar, srv TimeAskServer) {
-	s.RegisterService(&TimeAsk_ServiceDesc, srv)
+func RegisterUsermanagementServer(s grpc.ServiceRegistrar, srv UsermanagementServer) {
+	s.RegisterService(&Usermanagement_ServiceDesc, srv)
 }
 
-func _TimeAsk_AskForTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AskForTimeMessage)
+func _Usermanagement_ClientJoin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewClient)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TimeAskServer).AskForTime(ctx, in)
+		return srv.(UsermanagementServer).ClientJoin(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChittyChat.TimeAsk/AskForTime",
+		FullMethod: "/ChittyChat.Usermanagement/ClientJoin",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TimeAskServer).AskForTime(ctx, req.(*AskForTimeMessage))
+		return srv.(UsermanagementServer).ClientJoin(ctx, req.(*NewClient))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// TimeAsk_ServiceDesc is the grpc.ServiceDesc for TimeAsk service.
+// Usermanagement_ServiceDesc is the grpc.ServiceDesc for Usermanagement service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var TimeAsk_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChittyChat.TimeAsk",
-	HandlerType: (*TimeAskServer)(nil),
+var Usermanagement_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ChittyChat.Usermanagement",
+	HandlerType: (*UsermanagementServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "AskForTime",
-			Handler:    _TimeAsk_AskForTime_Handler,
+			MethodName: "ClientJoin",
+			Handler:    _Usermanagement_ClientJoin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
