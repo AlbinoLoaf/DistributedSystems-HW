@@ -49,7 +49,7 @@ func main() {
 			}
 		} else {
 
-			log.Printf("Publish: %s", scanner.Text())
+			c.Publish(scanner.Text())
 		}
 	}
 	//go waitForTimeRequest(client)
@@ -65,14 +65,16 @@ func (c *Client) compareAndUpdate(serverConnection proto.UsermanagementClient) {
 	})
 	if err != nil {
 		log.Fatalf("Compare And update sad %v", err)
-	}
-	if Server.Time > c.Timestamp {
-		i := c.Timestamp + 1
-		for i <= Server.Time {
-			c.RequestEvent(i)
-			i++
+	} else {
+		//log.Printf("Server time %d ---- incomming time: %d \n", Server.Time, c.Timestamp)
+		if Server.Time > c.Timestamp {
+			i := c.Timestamp + 1
+			for i <= Server.Time {
+				c.RequestEvent(i - 1)
+				i++
+			}
+			c.Timestamp = Server.Time
 		}
-		c.Timestamp = Server.Time
 	}
 }
 
@@ -90,19 +92,23 @@ func (c *Client) AwaitChange() {
 }
 
 func (c *Client) Publish(message string) {
-	serverConnection, err := connectToServer()
-	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
+	if len(message) < 1 || len(message) > 128 {
+		log.Print("invallid message length")
+	} else {
+		log.Print("We try and publish")
+		serverConnection, err := connectToServer()
+		if err != nil {
+			log.Fatalf("Failed to connect to server: %v", err)
 
+		}
+		c.compareAndUpdate(serverConnection)
+		Server, err := serverConnection.SendMessage(context.Background(), &proto.PublishMessage{
+			Name:    c.name,
+			Message: message,
+			Id:      c.id,
+		})
+		c.Timestamp = Server.Time
 	}
-	c.compareAndUpdate(serverConnection)
-	Server, err := serverConnection.SendMessage(context.Background(), &proto.PublishMessage{
-		Name:    c.name,
-		Message: message,
-		Id:      c.id,
-	})
-	c.Timestamp = Server.Time
-
 }
 
 func (c *Client) RequestEvent(wantedEvent int64) {

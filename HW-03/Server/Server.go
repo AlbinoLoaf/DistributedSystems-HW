@@ -25,6 +25,7 @@ var port = flag.Int("port", 0, "server port number")
 
 func main() {
 	// Get the port from the command line when the server is run
+
 	flag.Parse()
 
 	// Create a server struct
@@ -36,7 +37,7 @@ func main() {
 		log:       make([]string, 1),
 		Timestamp: 1,
 	}
-
+	server.log[0] = "start of the server"
 	// Start the server
 	go startServer(server)
 
@@ -95,7 +96,6 @@ func deleteID(s *Server, id int64) {
 }
 
 func (c *Server) LeaveClient(ctx context.Context, in *proto.Client) (*proto.Confirmation, error) {
-	log.Printf("Client %s with id %d left", in.Name, in.Id)
 	deleteID(c, in.Id)
 	if c.capacity[in.Id-1] {
 		log.Print("Couldn't delete Client")
@@ -118,13 +118,14 @@ func (c *Server) RequestChange(ctx context.Context, in *proto.Timestamp) (*proto
 }
 
 func (c *Server) LogEvent(Event string) {
+	log.Print(c.Timestamp)
 	c.log = append(c.log, Event)
 	c.Timestamp++
 }
 
 func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
 	var _id int64 = int64(GenerateId(c))
-	event := fmt.Sprintf("A new person have joined say hi to %s at time %d", in.Name, (c.Timestamp)) // Without ID
+	event := fmt.Sprintf("A new person have joined say hi to %s who joined at time %d", in.Name, (c.Timestamp)) // Without ID
 	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)
 	c.LogEvent(event)
 	return &proto.Client{Name: in.Name, Id: _id, Timestamp: c.Timestamp - 1}, nil
@@ -132,5 +133,6 @@ func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Cl
 
 func (c *Server) RequestBroadcast(ctx context.Context, in *proto.Timestamp) (*proto.Broadcast, error) {
 	//return &proto.Broadcast{message: broadcastString}, nil
+	//log.Printf("Server time %d ---- incomming time: %d \n log length %d", c.Timestamp, in.Time, len(c.log))
 	return &proto.Broadcast{Message: c.log[in.Time]}, nil
 }
