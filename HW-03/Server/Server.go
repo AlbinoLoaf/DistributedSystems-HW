@@ -70,10 +70,10 @@ func GenerateId(s *Server) (id int) {
 	var num int
 	for i, v := range s.capacity {
 		if v == false {
-			log.Printf("Value = %v Index = %d", v, i)
+			//log.Printf("Value = %v Index = %d", v, i)
 			num = i
 			s.capacity[i] = true
-			log.Printf("Value = %v Index = %d", v, i)
+			//log.Printf("Value = %v Index = %d", v, i)
 			break
 		}
 
