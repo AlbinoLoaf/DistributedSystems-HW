@@ -33,6 +33,11 @@ message Client{
   // int64 portnr =2;
 }
 
+message confirmation{
+  bool Accept = 1;
+}
+
 service Usermanagement {
+  rpc LeaveClient(Client) returns (confirmation);
   rpc ClientJoin(NewClient) returns (Client);
 }

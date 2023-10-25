@@ -81,6 +81,26 @@ func GenerateId(s *Server) (id int) {
 	return num + 1
 }
 
+func deleteID(s *Server, id int64) {
+	if s.capacity[id-1] {
+		s.capacity[id-1] = false
+	} else {
+		log.Fatalf("The wrong ID recieved")
+	}
+}
+
+func (c *Server) LeaveClient(ctx context.Context, in *proto.Client) (*proto.Confirmation, error) {
+	log.Printf("Client %s with id %d left", in.Name, in.Id)
+	deleteID(c, in.Id)
+	if c.capacity[in.Id-1] {
+		log.Print("Couldn't delete Client")
+		return nil, nil
+	} else {
+		return &proto.Confirmation{Accept: true}, nil
+	}
+
+}
+
 func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
 	var _id int64 = int64(GenerateId(c))
 	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)

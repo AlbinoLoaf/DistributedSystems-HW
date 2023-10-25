@@ -108,6 +108,7 @@ var BC_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsermanagementClient interface {
+	LeaveClient(ctx context.Context, in *Client, opts ...grpc.CallOption) (*Confirmation, error)
 	ClientJoin(ctx context.Context, in *NewClient, opts ...grpc.CallOption) (*Client, error)
 }
 
@@ -117,6 +118,15 @@ type usermanagementClient struct {
 
 func NewUsermanagementClient(cc grpc.ClientConnInterface) UsermanagementClient {
 	return &usermanagementClient{cc}
+}
+
+func (c *usermanagementClient) LeaveClient(ctx context.Context, in *Client, opts ...grpc.CallOption) (*Confirmation, error) {
+	out := new(Confirmation)
+	err := c.cc.Invoke(ctx, "/ChittyChat.Usermanagement/LeaveClient", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *usermanagementClient) ClientJoin(ctx context.Context, in *NewClient, opts ...grpc.CallOption) (*Client, error) {
@@ -132,6 +142,7 @@ func (c *usermanagementClient) ClientJoin(ctx context.Context, in *NewClient, op
 // All implementations must embed UnimplementedUsermanagementServer
 // for forward compatibility
 type UsermanagementServer interface {
+	LeaveClient(context.Context, *Client) (*Confirmation, error)
 	ClientJoin(context.Context, *NewClient) (*Client, error)
 	mustEmbedUnimplementedUsermanagementServer()
 }
@@ -140,6 +151,9 @@ type UsermanagementServer interface {
 type UnimplementedUsermanagementServer struct {
 }
 
+func (UnimplementedUsermanagementServer) LeaveClient(context.Context, *Client) (*Confirmation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LeaveClient not implemented")
+}
 func (UnimplementedUsermanagementServer) ClientJoin(context.Context, *NewClient) (*Client, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClientJoin not implemented")
 }
@@ -154,6 +168,24 @@ type UnsafeUsermanagementServer interface {
 
 func RegisterUsermanagementServer(s grpc.ServiceRegistrar, srv UsermanagementServer) {
 	s.RegisterService(&Usermanagement_ServiceDesc, srv)
+}
+
+func _Usermanagement_LeaveClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Client)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsermanagementServer).LeaveClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ChittyChat.Usermanagement/LeaveClient",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsermanagementServer).LeaveClient(ctx, req.(*Client))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Usermanagement_ClientJoin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -181,6 +213,10 @@ var Usermanagement_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ChittyChat.Usermanagement",
 	HandlerType: (*UsermanagementServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "LeaveClient",
+			Handler:    _Usermanagement_LeaveClient_Handler,
+		},
 		{
 			MethodName: "ClientJoin",
 			Handler:    _Usermanagement_ClientJoin_Handler,
