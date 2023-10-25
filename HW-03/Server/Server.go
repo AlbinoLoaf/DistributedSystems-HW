@@ -15,6 +15,7 @@ type Server struct {
 	proto.UnimplementedUsermanagementServer // Necessary
 	name                                    string
 	port                                    int
+	capacity                                []bool
 }
 
 var port = flag.Int("port", 0, "server port number")
@@ -27,6 +28,8 @@ func main() {
 	server := &Server{
 		name: "serverName",
 		port: *port,
+		// declare server capacity
+		capacity: make([]bool, 5),
 	}
 
 	// Start the server
@@ -63,8 +66,23 @@ func startServer(server *Server) {
 // 	return &proto.TimeMessage{Time: time.Now().String()}, nil
 // }
 
+func GenerateId(s *Server) (id int) {
+	var num int
+	for i, v := range s.capacity {
+		if v == false {
+			log.Printf("Value = %v Index = %d", v, i)
+			num = i
+			s.capacity[i] = true
+			log.Printf("Value = %v Index = %d", v, i)
+			break
+		}
+
+	}
+	return num + 1
+}
+
 func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
-	var _id int64 = 1
+	var _id int64 = int64(GenerateId(c))
 	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)
 	return &proto.Client{Name: in.Name, Id: _id}, nil
 }
