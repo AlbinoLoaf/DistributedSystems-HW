@@ -188,8 +188,6 @@ func connectToServer() (proto.UsermanagementClient, error) {
 	conn, err := grpc.Dial("localhost:"+strconv.Itoa(*serverPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Could not connect to port %d", *serverPort)
-	} else {
-		log.Printf("Connected to the server at port %d\n", *serverPort)
 	}
 	return proto.NewUsermanagementClient(conn), nil
 }

@@ -118,14 +118,14 @@ func (c *Server) RequestChange(ctx context.Context, in *proto.Timestamp) (*proto
 }
 
 func (c *Server) LogEvent(Event string) {
-	log.Print(c.Timestamp)
+	log.Printf("Lamport time: %d", c.Timestamp)
 	c.log = append(c.log, Event)
 	c.Timestamp++
 }
 
 func (c *Server) ClientJoin(ctx context.Context, in *proto.NewClient) (*proto.Client, error) {
 	var _id int64 = int64(GenerateId(c))
-	event := fmt.Sprintf("A new person have joined say hi to %s who joined at time %d", in.Name, (c.Timestamp)) // Without ID
+	event := fmt.Sprintf("A new person have joined say hi to %s who joined at lamport time %d", in.Name, (c.Timestamp)) // Without ID
 	log.Printf("Client %s joined and got assigned ID %d", in.Name, _id)
 	c.LogEvent(event)
 	return &proto.Client{Name: in.Name, Id: _id, Timestamp: c.Timestamp - 1}, nil
