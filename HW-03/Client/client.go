@@ -95,7 +95,6 @@ func (c *Client) Publish(message string) {
 	if len(message) < 1 || len(message) > 128 {
 		log.Print("invallid message length")
 	} else {
-		log.Print("We try and publish")
 		serverConnection, err := connectToServer()
 		if err != nil {
 			log.Fatalf("Failed to connect to server: %v", err)
