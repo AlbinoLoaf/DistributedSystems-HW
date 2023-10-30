@@ -110,7 +110,7 @@ func (c *Server) LeaveClient(ctx context.Context, in *proto.Client) (*proto.Conf
 func (c *Server) SendMessage(ctx context.Context, in *proto.PublishMessage) (*proto.Timestamp, error) {
 	Message := fmt.Sprintf("%s was set at %d by %s", in.Message, c.Timestamp, in.Name)
 	c.LogEvent(Message)
-	return &proto.Timestamp{Time: c.Timestamp}, nil
+	return &proto.Timestamp{Time: c.Timestamp - 1}, nil
 }
 
 func (c *Server) RequestChange(ctx context.Context, in *proto.Timestamp) (*proto.Timestamp, error) {
