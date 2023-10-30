@@ -6,3 +6,4 @@ to start a client you open another terminal and write something like this line "
 the sPort has to be the same as the port you gave the server and the -n is the name you want to give the client. 
 
 to write a message as a client you just write the message and hit enter
+to leave you write leave in the clients terminal
