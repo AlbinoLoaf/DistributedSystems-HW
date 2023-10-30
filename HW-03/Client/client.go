@@ -67,7 +67,7 @@ func (c *Client) compareAndUpdate(serverConnection proto.UsermanagementClient) {
 	} else {
 		//log.Printf("Server time %d ---- incomming time: %d \n", Server.Time, c.Timestamp)
 		if Server.Time > c.Timestamp {
-			i := c.Timestamp
+			i := c.Timestamp + 1
 			for i <= Server.Time {
 				c.RequestEvent(i - 1)
 				i++
