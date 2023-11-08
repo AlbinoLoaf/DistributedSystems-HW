@@ -101,7 +101,7 @@ func (c *Server) LeaveClient(ctx context.Context, in *proto.Client) (*proto.Conf
 		log.Print("Couldn't delete Client")
 		return nil, nil
 	} else {
-		event := fmt.Sprintf("%s left the server what a looser", in.Name)
+		event := fmt.Sprintf("%s left the server at lamport time %d", in.Name, c.Timestamp)
 		c.LogEvent(event)
 		return &proto.Confirmation{Accept: true}, nil
 	}
