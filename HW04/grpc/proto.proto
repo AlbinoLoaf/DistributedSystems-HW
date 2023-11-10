@@ -7,7 +7,7 @@ option go_package = "grpc/proto";
 message Request{
     string message =1;
     int64 id = 2;
-    int64 sequence = 3;
+    int64 timestamp = 3;
 }
 
 message Reply{
@@ -17,6 +17,6 @@ message Reply{
 }
 
 service NodeManagement{
-    rpc sendRequest(Request) returns (Reply);
-
+    rpc RequestReply(Request) returns (Reply);
+    
 }
