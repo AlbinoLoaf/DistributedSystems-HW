@@ -16,7 +16,13 @@ message Reply{
 
 }
 
+message CriticalSectionAllowance{
+    bool Allowance =1;
+    int64 id= 2;
+}
+
 service NodeManagement{
-    rpc RequestReply(Request) returns (Reply);
+    rpc InitialContact(Request) returns (Reply);
+    rpc RequestCriticalSection(Request) returns  (CriticalSectionAllowance);
     
 }

@@ -1,1 +1,1 @@
-localhost: 4000,localhost: 4010,localhost: 4020
+localhost:4000,localhost:4010,localhost:4020
