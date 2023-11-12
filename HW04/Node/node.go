@@ -25,6 +25,7 @@ var Address = flag.String("address", "localhost", "Tcp server address")
 type Server struct {
 	proto.UnimplementedNodeManagementServer // You need this line if you have a server
 	id                                      int64
+	usingCriticalSection                    bool
 }
 
 func main() {
@@ -40,16 +41,16 @@ func main() {
 
 	// Create a proto server object
 	s := grpc.NewServer()
-
+	fmt.Printf("Server type: %T\n", s)
 	// Attach the Node service to the server
-	proto.RegisterNodeManagementServer(s, &Server{id: *idf})
+	proto.RegisterNodeManagementServer(s, &Server{id: *idf, usingCriticalSection: false})
 
 	// start sending requests to peer
 	list := GetPorts()
 	i := 0
 	for i < len(list) {
 		if !strings.Contains(list[i], *Port) {
-			go runClient(list[i])
+			go runClient(list[i], s)
 
 		}
 		i++
@@ -62,7 +63,7 @@ func main() {
 	// code here is unreachable because protoServer.Serve occupies the current thread.
 }
 
-func runClient(connection string) {
+func runClient(connection string, server *grpc.Server) {
 	fmt.Println("starting client...")
 	// Set up a connection to the server.
 	opts := []grpc.DialOption{
@@ -77,25 +78,51 @@ func runClient(connection string) {
 	defer conn.Close()
 
 	c := proto.NewNodeManagementClient(conn)
+	answers := 0
 
 	for {
-		c.RequestReply(context.Background(), &proto.Request{Message: "go Ahead", Id: *idf, Timestamp: 1})
-		i := rand.Intn(6)
-		time.Sleep(time.Duration(i) + 3)
+		reply, err := c.RequestReply(context.Background(), &proto.Request{Message: "go Ahead", Id: *idf, Timestamp: 1})
+		if err != nil {
+			log.Fatalf("Reply cause fatal error: %v", err)
+		}
+		//We know this is cursed but it works.
+		//time.duration is in nanoseconds and
+		//we desire the order of maginitude to be in seconds
+		var magnitude int
+		magnitude = 1e9
+		waitTimer := (rand.Intn(4) + 1) * magnitude
+		fmt.Println(waitTimer / magnitude)
+
+		if "Go ahead" == reply.Message {
+			answers++
+			if answers == 2 {
+
+				thinkTimer := (rand.Intn(10) + 5) * magnitude
+				fmt.Println(thinkTimer / magnitude)
+				//Take critical Setion.
+				fmt.Print("I am the criticallest of sections\n")
+				time.Sleep(time.Duration(thinkTimer))
+				answers = 0
+			}
+		}
+		time.Sleep(time.Duration(waitTimer))
+		fmt.Printf("Server %d was told %s\n", *idf, reply.Message)
 	}
 }
 
 func (s *Server) RequestReply(ctx context.Context, in *proto.Request) (*proto.Reply, error) {
 	// If true this node accepts the requests replying go ahead
-	if s.ResolveRequest(in.Id, in.Timestamp) {
+	if s.ResolveRequest(in.Timestamp, in.Id) {
 		return &proto.Reply{Message: "Go ahead", Id: in.Id}, nil
+	} else {
+		return &proto.Reply{Message: "Don't go ahead", Id: in.Id}, nil
 	}
-	return nil, nil
-
 }
 func (s *Server) ResolveRequest(ForeignTimestamp int64, foreignID int64) (Accaptance bool) {
 	fmt.Printf("Server %d got contacted by server %d\n", s.id, foreignID)
-	time.Sleep(time.Second)
+	for s.usingCriticalSection {
+		time.Sleep(time.Millisecond * 500)
+	}
 	return true
 
 }
