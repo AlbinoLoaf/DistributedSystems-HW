@@ -23,7 +23,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NodeManagementClient interface {
 	InitialContact(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Reply, error)
-	RequestCriticalSection(ctx context.Context, in *Request, opts ...grpc.CallOption) (*CriticalSectionAllowance, error)
 }
 
 type nodeManagementClient struct {
@@ -43,21 +42,11 @@ func (c *nodeManagementClient) InitialContact(ctx context.Context, in *Request, 
 	return out, nil
 }
 
-func (c *nodeManagementClient) RequestCriticalSection(ctx context.Context, in *Request, opts ...grpc.CallOption) (*CriticalSectionAllowance, error) {
-	out := new(CriticalSectionAllowance)
-	err := c.cc.Invoke(ctx, "/hw04.NodeManagement/RequestCriticalSection", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // NodeManagementServer is the server API for NodeManagement service.
 // All implementations must embed UnimplementedNodeManagementServer
 // for forward compatibility
 type NodeManagementServer interface {
 	InitialContact(context.Context, *Request) (*Reply, error)
-	RequestCriticalSection(context.Context, *Request) (*CriticalSectionAllowance, error)
 	mustEmbedUnimplementedNodeManagementServer()
 }
 
@@ -67,9 +56,6 @@ type UnimplementedNodeManagementServer struct {
 
 func (UnimplementedNodeManagementServer) InitialContact(context.Context, *Request) (*Reply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitialContact not implemented")
-}
-func (UnimplementedNodeManagementServer) RequestCriticalSection(context.Context, *Request) (*CriticalSectionAllowance, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestCriticalSection not implemented")
 }
 func (UnimplementedNodeManagementServer) mustEmbedUnimplementedNodeManagementServer() {}
 
@@ -102,24 +88,6 @@ func _NodeManagement_InitialContact_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NodeManagement_RequestCriticalSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NodeManagementServer).RequestCriticalSection(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/hw04.NodeManagement/RequestCriticalSection",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeManagementServer).RequestCriticalSection(ctx, req.(*Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // NodeManagement_ServiceDesc is the grpc.ServiceDesc for NodeManagement service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,10 +98,6 @@ var NodeManagement_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitialContact",
 			Handler:    _NodeManagement_InitialContact_Handler,
-		},
-		{
-			MethodName: "RequestCriticalSection",
-			Handler:    _NodeManagement_RequestCriticalSection_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

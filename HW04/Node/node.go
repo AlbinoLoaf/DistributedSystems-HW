@@ -1,214 +1,171 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
-	"strings"
+	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	proto "hw04/grpc"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-var idf = flag.Int64("id", 0, "server Id")
-var Port = flag.String("port", "5400", "Own Tcp server port")
-var Address = flag.String("address", "localhost", "Tcp server address")
-
-type Server struct {
-	proto.UnimplementedNodeManagementServer // You need this line if you have a server
-	id                                      int64
-	Timestamp                               int64
-	usingCriticalSection                    bool
-	Nodes                                   []Node
-	inquiries                               []int
+type Peer struct {
+	proto.UnimplementedNodeManagementServer
+	id                        int64
+	Timestamp                 int64
+	hightestSeen              int64
+	Acknowledged              map[int64]bool
+	clients                   map[int64]proto.NodeManagementClient
+	ctx                       context.Context
+	usingCriticalSection      bool
+	requestingCriticalSection bool
+	mu                        sync.Mutex
 }
 
 func main() {
-	flag.Parse()
-	fmt.Println("Starting server...")
-	// log.SetOutput(os.Stdout)
-	server := &Server{
-		id:                   *idf,
-		Timestamp:            1,
-		usingCriticalSection: false,
-		Nodes:                make([]Node, 0),
+	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
+	ownPort := int64(arg1) + 5000
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p := &Peer{
+		id:                        ownPort,
+		Timestamp:                 1,
+		hightestSeen:              1,
+		Acknowledged:              make(map[int64]bool),
+		clients:                   make(map[int64]proto.NodeManagementClient),
+		ctx:                       ctx,
+		usingCriticalSection:      false,
+		requestingCriticalSection: false,
 	}
-	// Create a listener on TCP port
-	lis, err := net.Listen("tcp", *Address+":"+*Port)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	fmt.Println("Address for server")
-	fmt.Println(lis.Addr())
-	// Create a proto server object
 	s := grpc.NewServer()
-	// Attach the Node service to the server
-	proto.RegisterNodeManagementServer(s, server)
-
-	// start sending requests to peer
-	list := GetPorts()
-	i := 0
-	for i < len(list) {
-		if !strings.Contains(list[i], *Port) {
-			go server.runClient(list[i])
-			fmt.Print("g")
-
+	proto.RegisterNodeManagementServer(s, p)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to server %v", err)
 		}
-		i++
-	}
-	fmt.Print("h")
-	randomSleep(5e3, 1e3)
-	count := 0
-	for count < 5 {
-		for !server.usingCriticalSection {
-			fmt.Print("E")
-			server.usingCriticalSection = server.confirmation()
-			fmt.Print("F")
-			fmt.Print("tis the season")
-			randomSleep(1e3, 9e3)
-			i := 0
-			for i < len(server.Nodes) {
-				go server.Nodes[i].RequestCriticalSection()
-				i++
-			}
+	}()
+
+	for i := 0; i < 3; i++ {
+		port := int64(5000) + int64(i)
+
+		if port == ownPort {
+			continue
 		}
-		count++
-	}
-	// Serve proto server
-	fmt.Println("Serving proto on port " + *Port)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
-	// code here is unreachable because protoServer.Serve occupies the current thread.
-}
 
-func (s *Server) runClient(connection string) {
-	fmt.Println("starting client...")
-	// Set up a connection to the server.
-	fmt.Printf("\n%s\n", connection)
-	opts := []grpc.DialOption{
-		grpc.WithBlock(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	fmt.Print("A")
-	var conn *grpc.ClientConn
-	var err error
-
-	for i := 0; i < 8; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		conn, err = grpc.DialContext(ctx, connection, opts...)
+		var conn *grpc.ClientConn
+		fmt.Printf("Trying to dial: %v\n", port)
+		conn, err := grpc.Dial(fmt.Sprintf(":%v", port), grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			// If there's an error, sleep for a while before retrying
-			log.Printf("Attempt %d: did not connect: %v", i+1, err)
-			time.Sleep(time.Second * 5)
-		} else {
-			// If connection is successful, break out of the loop
-			break
+			log.Fatalf("Could not connect: %s", err)
 		}
-	}
-
-	if conn == nil {
-		log.Fatalf("Could not establish connection after %d attempts", 8)
-	} else {
 		defer conn.Close()
-		fmt.Print("B")
+		c := proto.NewNodeManagementClient(conn)
+		p.clients[port] = c
 	}
-	c_ := proto.NewNodeManagementClient(conn)
-	message := fmt.Sprintf("Saying hi from %d", *idf)
-	fmt.Print("C")
-	reply, err := c_.InitialContact(context.Background(), &proto.Request{Message: message, Id: s.id, Timestamp: 1})
-	if err != nil {
-		log.Fatalf("Reply cause fatal error: %v", err)
+
+	for true {
+		i := rand.Intn(1e2 / 2)
+		if i == 42 {
+			p.sendPingToAll()
+		}
+		randomSleep(1e2, 1e2)
 	}
-	fmt.Print("D")
-	fmt.Println(reply.Message)
-	s.Nodes = append(s.Nodes, Node{
-		c:           c_,
-		Add:         connection,
-		serverID:    reply.Id,
-		QueryServer: s.id,
-		permision:   false,
-	})
-}
-func (n *Node) RequestCriticalSection() {
-	message := fmt.Sprintf("Can %d have the critical section?", n.QueryServer)
-	reply, err := n.c.RequestCriticalSection(context.Background(), &proto.Request{Message: message, Id: n.QueryServer, Timestamp: 1})
-	if err != nil {
-		log.Fatalf("Reply cause fatal error: %v", err)
-	}
-	n.permision = reply.Allowance
 }
 
-func (s *Server) InitialContact(ctx context.Context, in *proto.Request) (*proto.Reply, error) {
-	// If true this node accepts the requests replying go ahead
-	fmt.Print("Req Recieved")
-	replyMSG := fmt.Sprintf("Saying hi from %d", s.id)
-	return &proto.Reply{Message: replyMSG, Id: s.id}, nil
-}
-func (s *Server) RequestCriticalSection(ctx context.Context, in *proto.Request) (*proto.CriticalSectionAllowance, error) {
-	for s.usingCriticalSection {
-		fmt.Println(in.Message)
+func (p *Peer) InitialContact(ctx context.Context, req *proto.Request) (*proto.Reply, error) {
+	id := req.Id
+	if p.hightestSeen < req.Timestamp {
+		p.hightestSeen = req.Timestamp
+	}
+	for p.usingCriticalSection {
+		//fmt.Println("using critical section waiting for it to stop")
 		randomSleep(1e2, 3e2)
 	}
-	fmt.Println(in.Message)
-	fmt.Println("Approved")
-	return &proto.CriticalSectionAllowance{Allowance: true, Id: s.id}, nil
-}
-
-type Node struct {
-	c           proto.NodeManagementClient
-	Add         string
-	serverID    int64
-	QueryServer int64
-	permision   bool
-}
-
-func (s *Server) confirmation() bool {
-	var Acknowldegments int
-	var Acknowledged bool
-	for !Acknowledged {
-		Acknowldegments = 0
-		i := 0
-		for i < len(s.Nodes) {
-			if s.Nodes[i].permision {
-				Acknowldegments++
-			}
-			if Acknowldegments == len(s.Nodes) {
-				Acknowledged = true
-			}
+	for p.compare(req.Id, req.Timestamp) && p.requestingCriticalSection {
+		I := 0
+		if I%2 == 0 {
+			//fmt.Println("I am ahead in the que")
 		}
+		I++
+		randomSleep(1e2, 3e2)
 	}
-	return Acknowledged
+	p.Acknowledged[id] = true
+	rep := &proto.Reply{Id: p.id, Acknowledge: p.Acknowledged[id]}
+	return rep, nil
 }
 
-func (s *Server) working() (done bool) {
+func (p *Peer) compare(incommingID int64, incommingTime int64) bool {
+	if incommingTime == p.Timestamp {
+		if incommingID > p.id {
+			return true
+		}
+	} else if incommingTime > p.Timestamp {
+		return true
+	} else {
+		return false
+	}
+	return false
+}
+
+func (p *Peer) sendPingToAll() {
+	p.requestingCriticalSection = true
+	p.IncrementTimestamp()
+	request := &proto.Request{Id: p.id, Timestamp: p.Timestamp}
+	count := 0
+
+	for id, client := range p.clients {
+		reply, err := client.InitialContact(p.ctx, request)
+		if err != nil {
+			fmt.Println("something went wrong")
+		}
+		if reply.Acknowledge {
+			count++
+		}
+		fmt.Printf("\nGot reply from id %v: %v\n count now at: %d\n", id, reply.Acknowledge, count)
+
+	}
+	if count == 2 {
+		p.working()
+		p.IncrementTimestamp()
+		p.requestingCriticalSection = false
+	}
+
+}
+
+func (p *Peer) IncrementTimestamp() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.hightestSeen > p.Timestamp {
+		p.Timestamp = p.hightestSeen
+	}
+	p.Timestamp++
+	fmt.Printf("Timestamp at: %d\n", p.Timestamp)
+}
+
+func (p *Peer) working() {
+	p.usingCriticalSection = true
+	fmt.Println("Using critical section")
 	randomSleep(5e3, 5e3)
-	return true
-}
-
-func GetPorts() []string {
-	content, err := ioutil.ReadFile("ports.txt")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	portString := bytes.NewBuffer(content).String()
-	portArr := strings.Split(portString, ",")
-
-	return portArr
+	fmt.Println("I am done using critical section")
+	p.usingCriticalSection = false
 }
 
 func randomSleep(minimum int, rangeofNumbers int) {
 	waitTimer := (rand.Intn(rangeofNumbers) + minimum)
-	fmt.Println(waitTimer)
+	//fmt.Printf("Wait  time in mS: %d\n", waitTimer)
 	time.Sleep(time.Duration(float64(waitTimer) * float64(time.Millisecond)))
 }

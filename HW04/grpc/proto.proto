@@ -5,24 +5,17 @@ package hw04;
 option go_package = "grpc/proto";
 
 message Request{
-    string message =1;
-    int64 id = 2;
-    int64 timestamp = 3;
+    int64 id = 1;
+    int64 timestamp = 2;
 }
 
 message Reply{
-    string message =1;
-    int64 id=2;
+    int64 id=1;
+    bool acknowledge =2;
 
 }
 
-message CriticalSectionAllowance{
-    bool Allowance =1;
-    int64 id= 2;
-}
 
 service NodeManagement{
     rpc InitialContact(Request) returns (Reply);
-    rpc RequestCriticalSection(Request) returns  (CriticalSectionAllowance);
-    
 }
