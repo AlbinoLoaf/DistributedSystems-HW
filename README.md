@@ -1,5 +1,5 @@
-# DistributedSystems-HW
-To run the program Run the following commands in three separate terminals.
+# DistributedSystems-HW04
+To run the program  navigate to "/HW04/node" and Run the following commands in three separate terminals.
 
 `go run . 0`
 
