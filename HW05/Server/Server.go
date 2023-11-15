@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"sync"
 
-	proto "hw05/grpc"
+	proto "/grpc"
 
 	"google.golang.org/grpc"
 )
@@ -84,13 +84,13 @@ func (n *Node) sendBid(ctx context.Context, req *proto.Request) (*proto.serverRe
 }
 
 func (n *Node) sendPingToAll() {
-	request := &n.hightestSeenBid{Id: n.id}
-	for id, client := range n.clients {
-		reply, err := client.Ping(n.ctx, request)
+	sendBid := &proto.sendBid{bid: n.hightestSeenBid, id: n.id}
+	for id, client := range n.RedundancyNodes {
+		serverReply, err := client.sendBid(n.ctx, sendBid)
 		if err != nil {
 			fmt.Println("something went wrong")
 		}
-		fmt.Printf("Got reply from id %v: %v\n", id, reply.Amount)
+		fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
 	}
 
 }

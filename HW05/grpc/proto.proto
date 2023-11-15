@@ -6,6 +6,7 @@ option go_package = "grpc/proto";
 
 message bid{
     int64 bid = 1; 
+    int64 id = 2;
 }
 
 message serverReply{
@@ -19,5 +20,5 @@ message win{
 
 service Auction{
     rpc sendBid (bid) returns (serverReply);
-    
+
 }
