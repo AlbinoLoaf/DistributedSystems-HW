@@ -19,8 +19,8 @@ type Node struct {
 	proto.UnimplementedAuctionServer
 	id              int64
 	Timestamp       int64
-	hightestSeen    int64
-	RedundancyNodes map[int64]proto.NodeManagementClient
+	hightestSeenBid int64
+	RedundancyNodes map[int64]proto.NodeServer
 	ctx             context.Context
 	mu              sync.Mutex
 }
@@ -35,7 +35,7 @@ func main() {
 	n := &Node{
 		id:              ownPort,
 		Timestamp:       1,
-		hightestSeen:    1,
+		hightestSeenBid: 1,
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
 	}
@@ -84,7 +84,7 @@ func (n *Node) sendBid(ctx context.Context, req *proto.Request) (*proto.serverRe
 }
 
 func (n *Node) sendPingToAll() {
-	request := &n.bid{Id: n.id}
+	request := &n.hightestSeenBid{Id: n.id}
 	for id, client := range n.clients {
 		reply, err := client.Ping(n.ctx, request)
 		if err != nil {

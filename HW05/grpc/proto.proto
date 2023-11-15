@@ -12,8 +12,12 @@ message serverReply{
     bool Succes =1;
 
 }
+message win{
+    string message = 1;
+}
 
 
 service Auction{
     rpc sendBid (bid) returns (serverReply);
+    
 }
