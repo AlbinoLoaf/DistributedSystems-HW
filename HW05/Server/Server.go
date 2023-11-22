@@ -43,7 +43,6 @@ func main() {
 		knownClients:    0,
 		clients:         make(map[int64]proto.AuctionClient),
 	}
-	
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
 	if err != nil {
@@ -82,17 +81,17 @@ func main() {
 	}
 }
 
-func (n *Node) sendBid(ctx context.Context, req *proto.Request) (*proto.serverReply, error) {
+func (n *Node) sendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply, error) {
 	n.Timestamp += 1
 
-	rep := &proto.serverReply{Succes: true}
+	rep := &proto.ServerReply{Succes: true}
 	return rep, nil
 }
 
 func (n *Node) sendPingToAll() {
-	sendBid := &proto.sendBid{bid: n.hightestSeenBid, id: n.id}
+	sendBid := n.SendBid{bid: n.hightestSeenBid, id: n.id}
 	for id, client := range n.RedundancyNodes {
-		serverReply, err := client.sendBid(n.ctx, sendBid)
+		serverReply, err := client.SendBid(n.ctx, sendBid)
 		if err != nil {
 			fmt.Println("something went wrong")
 		}
@@ -100,8 +99,8 @@ func (n *Node) sendPingToAll() {
 	}
 }
 
-func (n *Node) giveIdToClients(ctx context.Context, in *proto.requestClientId) (*proto.clientId, error) {
+func (n *Node) giveIdToClients(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
 	n.knownClients += 1
 	n.clients[n.knownClients] = in.client
-	return &proto.clientId{Id: n.knownClients}, nil
+	return &proto.ClientId{Id: n.knownClients}, nil
 }
