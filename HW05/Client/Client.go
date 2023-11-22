@@ -7,6 +7,7 @@ import (
 	proto "hw05/grpc"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -71,17 +72,22 @@ func main() {
 func (c *BidClient) ResolveBid(bid string) {
 	if num, err := strconv.ParseInt(bid, 10, 64); err == nil {
 		fmt.Printf("You entered the integer: %d\n", num)
+		//Checks that the bid is larger than your last bid,
+		//initial bid is zero thu no negative bids
 		if num < c.Mybid {
-			fmt.Printf("The integer %d is not a valid bid \nPlease enter lager bid than last bet of %d", num, c.Mybid)
+			fmt.Printf("The integer %d is not a valid bid \nPlease enter lager bid than last bet of %d\n", num, c.Mybid)
+		} else {
+			c.BidAuction(num)
 		}
-		c.BidAuction(num)
-
 	} else {
 		fmt.Println("You did not enter an integer.")
 	}
 }
 
 func (c *BidClient) BidAuction(mybid int64) {
+	c.Mybid = mybid
+	fmt.Printf("Bidding %d\nwith Id: %d\n", mybid, c.id)
+	fmt.Println(reflect.TypeOf(mybid))
 	reply, err := c.server.SendBid(context.Background(), &proto.Bid{
 		Bid: mybid,
 		Id:  c.id})

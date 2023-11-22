@@ -81,7 +81,7 @@ func main() {
 	}
 }
 
-func (n *Node) sendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply, error) {
+func (n *Node) SendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply, error) {
 	n.Timestamp += 1
 
 	rep := &proto.ServerReply{Succes: true}
