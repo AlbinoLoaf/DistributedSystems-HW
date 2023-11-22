@@ -23,6 +23,7 @@ type Node struct {
 	RedundancyNodes map[int64]proto.NodeServer
 	ctx             context.Context
 	mu              sync.Mutex
+	knownClients    int64
 }
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 		hightestSeenBid: 1,
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
+		knownClients:    0,
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
@@ -76,6 +78,7 @@ func main() {
 		}
 	}
 }
+
 func (n *Node) sendBid(ctx context.Context, req *proto.Request) (*proto.serverReply, error) {
 	n.Timestamp += 1
 
@@ -93,4 +96,9 @@ func (n *Node) sendPingToAll() {
 		fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
 	}
 
+}
+
+func (n *Node) giveIdToClients(ctx context.Context, in *proto.requestClientId) (*proto.clientId, error) {
+	n.knownClients += 1
+	return &proto.clientId{Id: n.knownClients}, nil
 }

@@ -16,9 +16,15 @@ message serverReply{
 message win{
     string message = 1;
 }
+message clientId{
+    int64 id = 1;
+}
+message requestClientId{
+    string message = 1;
+}
 
 
 service Auction{
     rpc sendBid (bid) returns (serverReply);
-
+    rpc requestId (requestClientId) returns (clientId);
 }
