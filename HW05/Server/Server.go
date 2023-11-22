@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"sync"
 
-	proto "/grpc"
+	proto "hw05/grpc"
 
 	"google.golang.org/grpc"
 )
