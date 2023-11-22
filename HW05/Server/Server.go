@@ -23,10 +23,11 @@ type Node struct {
 	RedundancyNodes map[int64]proto.NodeServer
 	ctx             context.Context
 	mu              sync.Mutex
-	knownClients    int64
+	knownClients     map[int64]proto.AuctionClient
 }
 
 func main() {
+	knownClients := 0
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int64(arg1) + 5000
 
@@ -39,7 +40,7 @@ func main() {
 		hightestSeenBid: 1,
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
-		knownClients:    0,
+		clients:    	 [knownClients]proto.AuctionClient{,
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
@@ -100,5 +101,6 @@ func (n *Node) sendPingToAll() {
 
 func (n *Node) giveIdToClients(ctx context.Context, in *proto.requestClientId) (*proto.clientId, error) {
 	n.knownClients += 1
+	n.clients[n.knownClients] = in.client
 	return &proto.clientId{Id: n.knownClients}, nil
 }
