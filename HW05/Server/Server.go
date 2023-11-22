@@ -41,7 +41,7 @@ func main() {
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
 		knownClients:    0,
-		clients:         make(map[int64]proto.AuctionClient),
+		//clients:         make(map[int64]proto.AuctionClient),
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
@@ -56,7 +56,7 @@ func main() {
 		}
 	}()
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		port := int64(5000) + int64(i)
 
 		if port == ownPort {
@@ -89,7 +89,8 @@ func (n *Node) sendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply,
 }
 
 func (n *Node) sendPingToAll() {
-	sendBid := n.SendBid{bid: n.hightestSeenBid, id: n.id}
+	sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
+
 	for id, client := range n.RedundancyNodes {
 		serverReply, err := client.SendBid(n.ctx, sendBid)
 		if err != nil {
@@ -101,6 +102,6 @@ func (n *Node) sendPingToAll() {
 
 func (n *Node) giveIdToClients(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
 	n.knownClients += 1
-	n.clients[n.knownClients] = in.client
+	//n.clients[n.knownClients] =
 	return &proto.ClientId{Id: n.knownClients}, nil
 }
