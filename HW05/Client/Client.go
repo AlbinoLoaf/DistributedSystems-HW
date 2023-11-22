@@ -30,25 +30,25 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	var conn *grpc.ClientConn
+	var err error
 	for i := 0; i < 4; i++ {
 		port := int64(5000) + int64(i/2)
 		fmt.Printf("trying port %d\n", port)
 		defer cancel()
-		conn, err := grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
+		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
 		if err != nil {
 			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
 			time.Sleep(time.Second * 5)
 		} else {
-			defer conn.Close()
 			break
 		}
 	}
 
-	// if conn == nil {
-	// 	log.Fatalf("Could not establish connection after %d attempts", 2)
-	// } else {
-	// 	defer conn.Close()
-	// }
+	if conn == nil {
+		log.Fatalf("Could not establish connection after %d attempts", 2)
+	} else {
+		defer conn.Close()
+	}
 	c_ := proto.NewAuctionClient(conn)
 	c := &BidClient{
 		id:              1,
