@@ -40,7 +40,7 @@ func main() {
 		hightestSeenBid: 1,
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
-		knownClients:    0,
+		knownClients:    2,
 		//clients:         make(map[int64]proto.AuctionClient),
 	}
 
@@ -100,7 +100,7 @@ func (n *Node) sendPingToAll() {
 	}
 }
 
-func (n *Node) giveIdToClients(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
+func (n *Node) RequestId(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
 	n.knownClients += 1
 	//n.clients[n.knownClients] =
 	return &proto.ClientId{Id: n.knownClients}, nil

@@ -58,6 +58,7 @@ func main() {
 		server:          c_,
 		ctx:             ctx,
 	}
+	c.getId()
 	for true {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -67,6 +68,17 @@ func main() {
 		}
 
 	}
+}
+
+func (c *BidClient) getId() {
+	reply, err := c.server.RequestId(context.Background(), &proto.RequestClientId{Message: "give me Id"})
+	if err != nil {
+		log.Fatalf("Getting id failed: %v", err)
+	}
+	fmt.Printf("my id before assignment %d\n", c.id)
+	c.id = reply.Id
+	fmt.Printf("recieved id %d and my assigned id %d\n", reply.Id, c.id)
+
 }
 
 func (c *BidClient) ResolveBid(bid string) {
@@ -94,6 +106,6 @@ func (c *BidClient) BidAuction(mybid int64) {
 	if err != nil {
 		log.Fatalf("Bidding failed: %v", err)
 	}
-	fmt.Printf("The bid was %v", reply.Succes)
+	fmt.Printf("The bid was %v\n", reply.Succes)
 
 }
