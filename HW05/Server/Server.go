@@ -14,7 +14,6 @@ import (
 	proto "hw05/grpc"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Node struct {
@@ -33,7 +32,7 @@ func main() {
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int64(arg1) + 5000
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 	defer cancel()
 
 	n := &Node{
@@ -52,18 +51,19 @@ func main() {
 	}
 	s := grpc.NewServer()
 	proto.RegisterAuctionServer(s, n)
+	fmt.Printf("server registered at port %d\n", ownPort)
 	go func() {
 		if err := s.Serve(lis); err != nil {
-			log.Fatalf("failed to server %v", err)
+			log.Fatalf("failed to server %v\n", err)
 		}
 	}()
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithInsecure(),
 	}
 	for i := 0; i < 2; i++ {
 		port := int64(5000) + int64(i)
-
+		fmt.Printf("my port%d the other port %d\n", ownPort, port)
 		if port == ownPort {
 			continue
 		}
@@ -72,16 +72,19 @@ func main() {
 		fmt.Printf("Trying to dial: %v\n", port)
 		defer cancel()
 		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
+		fmt.Printf("connection: %v\n", conn)
 		if err != nil {
 			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
 			time.Sleep(time.Second * 5)
 		} else {
 			defer conn.Close()
+			fmt.Printf("connection assigned: %v\n", conn)
 			c := proto.NewAuctionClient(conn)
 			n.RedundancyNodes[port] = c
-			break
 		}
-
+	}
+	for k, i := range n.RedundancyNodes {
+		fmt.Printf("server node %d has map from %d to %d\n", ownPort, k, i)
 	}
 	for true {
 		scanner := bufio.NewScanner(os.Stdin)
@@ -104,7 +107,7 @@ func (n *Node) sendPingToAll() {
 	for id, client := range n.RedundancyNodes {
 		serverReply, err := client.SendBid(n.ctx, sendBid)
 		if err != nil {
-			fmt.Println("something went wrong")
+			fmt.Println("something went wrong\n")
 		}
 		fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
 	}
