@@ -9,10 +9,12 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	proto "hw05/grpc"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Node struct {
@@ -55,7 +57,10 @@ func main() {
 			log.Fatalf("failed to server %v", err)
 		}
 	}()
-
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
 	for i := 0; i < 2; i++ {
 		port := int64(5000) + int64(i)
 
@@ -65,13 +70,18 @@ func main() {
 
 		var conn *grpc.ClientConn
 		fmt.Printf("Trying to dial: %v\n", port)
-		conn, err := grpc.Dial(fmt.Sprintf(":%v", port), grpc.WithInsecure(), grpc.WithBlock())
+		defer cancel()
+		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
 		if err != nil {
-			log.Fatalf("Could not connect: %s", err)
+			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
+			time.Sleep(time.Second * 5)
+		} else {
+			defer conn.Close()
+			c := proto.NewAuctionClient(conn)
+			n.RedundancyNodes[port] = c
+			break
 		}
-		defer conn.Close()
-		c := proto.NewAuctionClient(conn)
-		n.RedundancyNodes[port] = c
+
 	}
 	for true {
 		scanner := bufio.NewScanner(os.Stdin)
