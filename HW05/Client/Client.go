@@ -24,22 +24,22 @@ type BidClient struct {
 }
 
 func main() {
-
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	var conn *grpc.ClientConn
 	var err error
-	for i := 0; i < 4; i++ {
-		port := int64(5000) + int64(i/2)
+
+	for i := 0; i < 2; i++ {
+		port := int64(5000) + int64(i)
 		fmt.Printf("trying port %d\n", port)
-		defer cancel()
 		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
 		if err != nil {
 			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 1)
 		} else {
 			break
 		}

@@ -13,6 +13,7 @@ import (
 
 	proto "hw05/grpc"
 
+	"github.com/bradhe/stopwatch"
 	"google.golang.org/grpc"
 )
 
@@ -29,10 +30,11 @@ type Node struct {
 }
 
 func main() {
+	watch := stopwatch.Start()
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int64(arg1) + 5000
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
 	n := &Node{
@@ -61,26 +63,30 @@ func main() {
 		grpc.WithBlock(),
 		grpc.WithInsecure(),
 	}
+
 	for i := 0; i < 2; i++ {
 		port := int64(5000) + int64(i)
-		fmt.Printf("my port%d the other port %d\n", ownPort, port)
+		fmt.Printf("my portn%d the other port %d\n", ownPort, port)
 		if port == ownPort {
 			continue
-		}
-
-		var conn *grpc.ClientConn
-		fmt.Printf("Trying to dial: %v\n", port)
-		defer cancel()
-		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
-		fmt.Printf("connection: %v\n", conn)
-		if err != nil {
-			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
-			time.Sleep(time.Second * 5)
 		} else {
-			defer conn.Close()
-			fmt.Printf("connection assigned: %v\n", conn)
-			c := proto.NewAuctionClient(conn)
-			n.RedundancyNodes[port] = c
+
+			var conn *grpc.ClientConn
+			fmt.Printf("Trying to dial: %v\n", port)
+			defer cancel()
+			conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
+			fmt.Printf("connection: %v\n", conn)
+			if err != nil {
+				log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
+				time.Sleep(time.Second * 5)
+			} else {
+				defer conn.Close()
+
+				fmt.Printf("connection assigned: %v\n", conn)
+				c := proto.NewAuctionClient(conn)
+				n.RedundancyNodes[port] = c
+				fmt.Printf("Map Mapping from %d to %v\n", port, n.RedundancyNodes[port])
+			}
 		}
 	}
 	for k, i := range n.RedundancyNodes {
@@ -89,7 +95,17 @@ func main() {
 	for true {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			n.sendPingToAll()
+			sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
+
+			for id, client := range n.RedundancyNodes {
+				serverReply, err := client.SendBid(n.ctx, sendBid)
+				if err != nil {
+					watch.Stop()
+					fmt.Printf("Milliseconds elapsed: %v\n", watch.Milliseconds())
+					fmt.Println("something went wrong\n")
+				}
+				fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
+			}
 		}
 	}
 }

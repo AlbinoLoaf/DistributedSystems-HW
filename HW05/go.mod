@@ -3,6 +3,7 @@ module hw05
 go 1.21.0
 
 require (
+	github.com/bradhe/stopwatch v0.0.0-20190618212248-a58cccc508ea
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 )
