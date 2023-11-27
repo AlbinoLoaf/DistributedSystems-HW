@@ -88,20 +88,6 @@ func main() {
 		fmt.Printf("server node %d has map from %d to %d\n", ownPort, k, i)
 	}
 	go n.AuctionDuration()
-
-	// // Create a channel to signal when checkTime() returns false
-	// done := make(chan bool)
-
-	// // Run checkTime() in a separate goroutine
-	// go func() {
-	// 	for n.checkTime() {
-	// 		// Sleep for a while to avoid busy waiting
-	// 		time.Sleep(time.Second)
-	// 	}
-	// 	// Send a signal when checkTime() returns false
-	// 	done <- true
-	// }()
-
 	for {
 		if n.checkTime() {
 			fmt.Printf("The Auction is over!\nHighest bid was: %d", n.hightestSeenBid)
