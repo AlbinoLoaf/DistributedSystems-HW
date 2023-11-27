@@ -19,6 +19,7 @@ type BidClient struct {
 	id              int64
 	Mybid           int64
 	AuctionDuration int64
+	AuctionTime     int64
 	server          proto.AuctionClient
 	Timeer          bool
 	conn            *grpc.ClientConn
@@ -33,7 +34,8 @@ func main() {
 	c := &BidClient{
 		id:              1,
 		Mybid:           0,
-		AuctionDuration: 3,
+		AuctionDuration: 30,
+		AuctionTime:     0,
 		server:          nil,
 		Timeer:          false,
 		conn:            nil,
@@ -41,40 +43,31 @@ func main() {
 	c.AttemptConnection(opts)
 	c.getId()
 	go c.AuctionTimer()
-	for !c.Timeer {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
+	scanner := bufio.NewScanner(os.Stdin)
+	for {	
+		if scanner.Scan() {
 			text := scanner.Text()
 			c.ResolveBid(text)
-
-		}
-
-	}
-	done := make(chan bool)
-
-	go func() {
-		for c.Timeer() {
-			// Sleep for a while to avoid busy waiting
-			time.Sleep(time.Second)
-		}
-		// Send a signal when checkTime() returns false
-		done <- true
-	}()
-	// Run scanner.Scan() in the main goroutine
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-    	select {
-    	case <-done:
-        // Exit the loop when receiving a signal from the done channel
-        	break
-    	default:
-        // Call n.ServerRedundancy() when there's input
-			if scanner.Scan() {
-				n.ServerRedundancy()
 			}
-    }
-	fmt.Println("Auction is over")
+		}
 	}
+
+func (c *BidClient) checkTime() bool {
+	//fmt.Printf("Checking time\nTime at %d\n%t\n", n.Timestamp, n.Timestamp > 10)
+	if c.Timeer {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (c *BidClient) AuctionTimer() {
+	var i int64
+	for i = 0; i < c.AuctionDuration; i++ {
+		time.Sleep(time.Second)
+	}
+	fmt.Println("Auction is over")
+	os.Exit(0)
 }
 
 func (c *BidClient) getId() {
@@ -84,17 +77,9 @@ func (c *BidClient) getId() {
 	}
 	fmt.Printf("my id before assignment %d\n", c.id)
 	c.id = reply.Id
-	c.AuctionDuration = reply.Timestamp
+	c.AuctionTime = reply.Timestamp
 	fmt.Printf("recieved id %d and my assigned id %d\n", reply.Id, c.id)
 
-}
-
-func (c *BidClient) AuctionTimer() {
-	var i int64
-	for i = 0; i < c.AuctionDuration; i++ {
-		time.Sleep(time.Second)
-	}
-	c.Timeer = true
 }
 
 func (c *BidClient) ResolveBid(bid string) {

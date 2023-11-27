@@ -37,10 +37,10 @@ func main() {
 	n := &Node{
 		id:              ownPort,
 		Timestamp:       1,
-		hightestSeenBid: 1,
+		hightestSeenBid: 0,
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
-		knownClients:    2,
+		knownClients:    0,
 		// clients:         make(map[int64]proto.AuctionClient),
 	}
 
@@ -89,32 +89,35 @@ func main() {
 	}
 	go n.AuctionDuration()
 
-	// Create a channel to signal when checkTime() returns false
-	done := make(chan bool)
+	// // Create a channel to signal when checkTime() returns false
+	// done := make(chan bool)
 
-	// Run checkTime() in a separate goroutine
-	go func() {
-		for n.checkTime() {
-			// Sleep for a while to avoid busy waiting
-			time.Sleep(time.Second)
-		}
-		// Send a signal when checkTime() returns false
-		done <- true
-	}()
+	// // Run checkTime() in a separate goroutine
+	// go func() {
+	// 	for n.checkTime() {
+	// 		// Sleep for a while to avoid busy waiting
+	// 		time.Sleep(time.Second)
+	// 	}
+	// 	// Send a signal when checkTime() returns false
+	// 	done <- true
+	// }()
 
 	for {
-		select {
-		case <-done:
-			// Exit the loop when receiving a signal from the done channel
+		if n.checkTime() {
+			fmt.Printf("The Auction is over!\nHighest bid was: %d", n.hightestSeenBid)
 			os.Exit(0)
-		default:
+			// Sleep for a while to avoid busy waiting
+		} else {
+
 			continue
+
 		}
 	}
 }
 func (n *Node) checkTime() bool {
 	//fmt.Printf("Checking time\nTime at %d\n%t\n", n.Timestamp, n.Timestamp > 10)
-	if n.Timestamp > 60 {
+	if n.Timestamp < 30 {
+
 		return false
 	} else {
 		return true
@@ -123,7 +126,7 @@ func (n *Node) checkTime() bool {
 
 func (n *Node) AuctionDuration() {
 	var i int64
-	for i = 0; i <= 60; i++ {
+	for i = 0; i <= 30; i++ {
 		//fmt.Printf("Time at %d\n",i)
 		time.Sleep(time.Second)
 		n.Timestamp = i
