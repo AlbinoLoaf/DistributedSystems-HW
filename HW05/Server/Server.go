@@ -34,7 +34,7 @@ func main() {
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int64(arg1) + 5000
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	n := &Node{
@@ -75,14 +75,12 @@ func main() {
 			fmt.Printf("Trying to dial: %v\n", port)
 			defer cancel()
 			conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
-			fmt.Printf("connection: %v\n", conn)
 			if err != nil {
 				log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
 				time.Sleep(time.Second * 5)
 			} else {
 				defer conn.Close()
 
-				fmt.Printf("connection assigned: %v\n", conn)
 				c := proto.NewAuctionClient(conn)
 				n.RedundancyNodes[port] = c
 				fmt.Printf("Map Mapping from %d to %v\n", port, n.RedundancyNodes[port])
@@ -117,13 +115,13 @@ func (n *Node) SendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply,
 	return rep, nil
 }
 
-func (n *Node) sendPingToAll() {
+func (n *Node) Redundancy() {
 	sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
 
 	for id, client := range n.RedundancyNodes {
 		serverReply, err := client.SendBid(n.ctx, sendBid)
 		if err != nil {
-			fmt.Println("something went wrong\n")
+			fmt.Println("something went wrong")
 		}
 		fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
 	}
@@ -132,5 +130,12 @@ func (n *Node) sendPingToAll() {
 func (n *Node) RequestId(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
 	n.knownClients += 1
 	//n.clients[n.knownClients] =
+	// for id, client := range n.RedundancyNodes {
+	// 	reply, err := client.RequestId(n.ctx, &proto.RequestClientId{})
+	// 	if err != nil {
+	// 		fmt.Println("something went wrong")
+	// 	}
+	// 	fmt.Printf("Got reply from id %v: %v\n", id, reply.Id)
+	// }
 	return &proto.ClientId{Id: n.knownClients}, nil
 }

@@ -20,23 +20,25 @@ type BidClient struct {
 	Mybid           int64
 	AuctionDuration int64
 	server          proto.AuctionClient
-	ctx             context.Context
 }
 
 func main() {
+
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 	var conn *grpc.ClientConn
 	var err error
 
 	for i := 0; i < 2; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
 		port := int64(5000) + int64(i)
 		fmt.Printf("trying port %d\n", port)
 		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
+		time.Sleep(time.Second * 2)
+		cancel()
 		if err != nil {
 			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
 			time.Sleep(time.Second * 1)
@@ -56,7 +58,6 @@ func main() {
 		Mybid:           0,
 		AuctionDuration: 3,
 		server:          c_,
-		ctx:             ctx,
 	}
 	c.getId()
 	for true {
