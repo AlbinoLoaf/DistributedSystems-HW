@@ -91,7 +91,7 @@ func main() {
 
 	// Create a channel to signal when checkTime() returns false
 	done := make(chan bool)
-	
+
 	// Run checkTime() in a separate goroutine
 	go func() {
 		for n.checkTime() {
@@ -101,7 +101,7 @@ func main() {
 		// Send a signal when checkTime() returns false
 		done <- true
 	}()
-	
+
 	for {
 		select {
 		case <-done:
@@ -152,9 +152,15 @@ func (n *Node) ServerRedundancy() {
 	sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
 
 	for id, client := range n.RedundancyNodes {
+		if client == nil {
+			fmt.Printf("client %d is nil\n", id)
+			continue
+		}
 		serverReply, err := client.Redundancy(n.ctx, sendBid)
 		if err != nil {
-			fmt.Println("something went wrong")
+			fmt.Println("something went wrong, removing client")
+			delete(n.RedundancyNodes, id)
+			continue
 		}
 		fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
 	}

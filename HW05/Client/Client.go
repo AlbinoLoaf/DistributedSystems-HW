@@ -27,6 +27,7 @@ type BidClient struct {
 func main() {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
 	}
 
 	c := &BidClient{
@@ -49,7 +50,31 @@ func main() {
 		}
 
 	}
+	done := make(chan bool)
+
+	go func() {
+		for c.Timeer() {
+			// Sleep for a while to avoid busy waiting
+			time.Sleep(time.Second)
+		}
+		// Send a signal when checkTime() returns false
+		done <- true
+	}()
+	// Run scanner.Scan() in the main goroutine
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+    	select {
+    	case <-done:
+        // Exit the loop when receiving a signal from the done channel
+        	break
+    	default:
+        // Call n.ServerRedundancy() when there's input
+			if scanner.Scan() {
+				n.ServerRedundancy()
+			}
+    }
 	fmt.Println("Auction is over")
+	}
 }
 
 func (c *BidClient) getId() {
@@ -70,7 +95,6 @@ func (c *BidClient) AuctionTimer() {
 		time.Sleep(time.Second)
 	}
 	c.Timeer = true
-
 }
 
 func (c *BidClient) ResolveBid(bid string) {
@@ -91,8 +115,9 @@ func (c *BidClient) ResolveBid(bid string) {
 func (c *BidClient) BidAuction(mybid int64) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
 	}
-	if c.conn != nil {
+	if c.conn.GetState().String() != "READY" {
 		// Close the existing connection before creating a new one
 		c.conn.Close()
 	}
@@ -114,7 +139,7 @@ func (c *BidClient) BidAuction(mybid int64) {
 func (c *BidClient) AttemptConnection(opts []grpc.DialOption) *grpc.ClientConn {
 	var err error
 	for i := 0; i < 2; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 		port := int64(5000) + int64(i)
 		fmt.Printf("trying port %d\n", port)
 		c.conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
