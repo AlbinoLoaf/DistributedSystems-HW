@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -13,7 +12,6 @@ import (
 
 	proto "hw05/grpc"
 
-	"github.com/bradhe/stopwatch"
 	"google.golang.org/grpc"
 )
 
@@ -26,11 +24,10 @@ type Node struct {
 	ctx             context.Context
 	mu              sync.Mutex
 	knownClients    int64
-	clients         map[int64]proto.AuctionClient
+	// clients         map[int64]proto.AuctionClient
 }
 
 func main() {
-	watch := stopwatch.Start()
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int64(arg1) + 5000
 
@@ -44,7 +41,7 @@ func main() {
 		RedundancyNodes: make(map[int64]proto.AuctionClient),
 		ctx:             ctx,
 		knownClients:    2,
-		//clients:         make(map[int64]proto.AuctionClient),
+		// clients:         make(map[int64]proto.AuctionClient),
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
@@ -90,36 +87,72 @@ func main() {
 	for k, i := range n.RedundancyNodes {
 		fmt.Printf("server node %d has map from %d to %d\n", ownPort, k, i)
 	}
-	for true {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
+	go n.AuctionDuration()
 
-			for id, client := range n.RedundancyNodes {
-				serverReply, err := client.SendBid(n.ctx, sendBid)
-				if err != nil {
-					watch.Stop()
-					fmt.Printf("Milliseconds elapsed: %v\n", watch.Milliseconds())
-					fmt.Println("something went wrong\n")
-				}
-				fmt.Printf("Got reply from id %v: %v\n", id, serverReply.Succes)
-			}
+	// Create a channel to signal when checkTime() returns false
+	done := make(chan bool)
+	
+	// Run checkTime() in a separate goroutine
+	go func() {
+		for n.checkTime() {
+			// Sleep for a while to avoid busy waiting
+			time.Sleep(time.Second)
+		}
+		// Send a signal when checkTime() returns false
+		done <- true
+	}()
+	
+	for {
+		select {
+		case <-done:
+			// Exit the loop when receiving a signal from the done channel
+			os.Exit(0)
+		default:
+			continue
 		}
 	}
 }
+func (n *Node) checkTime() bool {
+	//fmt.Printf("Checking time\nTime at %d\n%t\n", n.Timestamp, n.Timestamp > 10)
+	if n.Timestamp > 60 {
+		return false
+	} else {
+		return true
+	}
+}
 
+func (n *Node) AuctionDuration() {
+	var i int64
+	for i = 0; i <= 60; i++ {
+		//fmt.Printf("Time at %d\n",i)
+		time.Sleep(time.Second)
+		n.Timestamp = i
+		//fmt.Printf("Time at %d\n", n.Timestamp)
+	}
+
+}
 func (n *Node) SendBid(ctx context.Context, req *proto.Bid) (*proto.ServerReply, error) {
-	n.Timestamp += 1
+	//n.Timestamp += 1
 
+	rep := &proto.ServerReply{Succes: true}
+	if n.ResolveBid(req.Bid) {
+		n.ServerRedundancy()
+	}
+	return rep, nil
+}
+
+func (n *Node) Redundancy(ctx context.Context, req *proto.Bid) (*proto.ServerReply, error) {
+	n.Timestamp += 1
+	_ = n.ResolveBid(req.Bid)
 	rep := &proto.ServerReply{Succes: true}
 	return rep, nil
 }
 
-func (n *Node) Redundancy() {
+func (n *Node) ServerRedundancy() {
 	sendBid := &proto.Bid{Bid: n.hightestSeenBid, Id: n.id}
 
 	for id, client := range n.RedundancyNodes {
-		serverReply, err := client.SendBid(n.ctx, sendBid)
+		serverReply, err := client.Redundancy(n.ctx, sendBid)
 		if err != nil {
 			fmt.Println("something went wrong")
 		}
@@ -127,9 +160,24 @@ func (n *Node) Redundancy() {
 	}
 }
 
+func (n *Node) ResolveBid(bid int64) bool {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if bid > n.hightestSeenBid {
+		n.hightestSeenBid = bid
+		fmt.Printf("I server %d got a new bid %d\n", n.id, n.hightestSeenBid)
+		return true
+	} else {
+		fmt.Printf("Bid %d was lower than %d \n", bid, n.hightestSeenBid)
+		return false
+	}
+}
+
 func (n *Node) RequestId(ctx context.Context, in *proto.RequestClientId) (*proto.ClientId, error) {
 	n.knownClients += 1
-	//n.clients[n.knownClients] =
+	// Map client ids to client and send information to all other servers
+
+	// n.clients[n.knownClients] = n.RedundancyNodes[n.knownClients]
 	// for id, client := range n.RedundancyNodes {
 	// 	reply, err := client.RequestId(n.ctx, &proto.RequestClientId{})
 	// 	if err != nil {
@@ -137,5 +185,5 @@ func (n *Node) RequestId(ctx context.Context, in *proto.RequestClientId) (*proto
 	// 	}
 	// 	fmt.Printf("Got reply from id %v: %v\n", id, reply.Id)
 	// }
-	return &proto.ClientId{Id: n.knownClients}, nil
+	return &proto.ClientId{Id: n.knownClients, Timestamp: n.Timestamp}, nil
 }

@@ -18,13 +18,14 @@ message win{
 }
 message clientId{
     int64 id = 1;
+    int64 Timestamp = 2; 
 }
 message requestClientId{
     string message = 1;
 }
 
-
 service Auction{
     rpc sendBid (bid) returns (serverReply);
     rpc requestId (requestClientId) returns (clientId);
+    rpc Redundancy (bid) returns (serverReply);
 }

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuctionClient interface {
 	SendBid(ctx context.Context, in *Bid, opts ...grpc.CallOption) (*ServerReply, error)
 	RequestId(ctx context.Context, in *RequestClientId, opts ...grpc.CallOption) (*ClientId, error)
+	Redundancy(ctx context.Context, in *Bid, opts ...grpc.CallOption) (*ServerReply, error)
 }
 
 type auctionClient struct {
@@ -52,12 +53,22 @@ func (c *auctionClient) RequestId(ctx context.Context, in *RequestClientId, opts
 	return out, nil
 }
 
+func (c *auctionClient) Redundancy(ctx context.Context, in *Bid, opts ...grpc.CallOption) (*ServerReply, error) {
+	out := new(ServerReply)
+	err := c.cc.Invoke(ctx, "/hw05.Auction/Redundancy", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuctionServer is the server API for Auction service.
 // All implementations must embed UnimplementedAuctionServer
 // for forward compatibility
 type AuctionServer interface {
 	SendBid(context.Context, *Bid) (*ServerReply, error)
 	RequestId(context.Context, *RequestClientId) (*ClientId, error)
+	Redundancy(context.Context, *Bid) (*ServerReply, error)
 	mustEmbedUnimplementedAuctionServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedAuctionServer) SendBid(context.Context, *Bid) (*ServerReply, 
 }
 func (UnimplementedAuctionServer) RequestId(context.Context, *RequestClientId) (*ClientId, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestId not implemented")
+}
+func (UnimplementedAuctionServer) Redundancy(context.Context, *Bid) (*ServerReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Redundancy not implemented")
 }
 func (UnimplementedAuctionServer) mustEmbedUnimplementedAuctionServer() {}
 
@@ -120,6 +134,24 @@ func _Auction_RequestId_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auction_Redundancy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Bid)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionServer).Redundancy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/hw05.Auction/Redundancy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionServer).Redundancy(ctx, req.(*Bid))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auction_ServiceDesc is the grpc.ServiceDesc for Auction service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var Auction_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "requestId",
 			Handler:    _Auction_RequestId_Handler,
+		},
+		{
+			MethodName: "Redundancy",
+			Handler:    _Auction_Redundancy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

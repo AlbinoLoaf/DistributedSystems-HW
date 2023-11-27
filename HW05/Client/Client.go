@@ -20,47 +20,27 @@ type BidClient struct {
 	Mybid           int64
 	AuctionDuration int64
 	server          proto.AuctionClient
+	Timeer          bool
+	conn            *grpc.ClientConn
 }
 
 func main() {
-
 	opts := []grpc.DialOption{
-		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	var conn *grpc.ClientConn
-	var err error
 
-	for i := 0; i < 2; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		port := int64(5000) + int64(i)
-		fmt.Printf("trying port %d\n", port)
-		conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
-		time.Sleep(time.Second * 2)
-		cancel()
-		if err != nil {
-			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
-			time.Sleep(time.Second * 1)
-		} else {
-			break
-		}
-	}
-
-	if conn == nil {
-		log.Fatalf("Could not establish connection after %d attempts", 2)
-	} else {
-		defer conn.Close()
-	}
-	c_ := proto.NewAuctionClient(conn)
 	c := &BidClient{
 		id:              1,
 		Mybid:           0,
 		AuctionDuration: 3,
-		server:          c_,
+		server:          nil,
+		Timeer:          false,
+		conn:            nil,
 	}
+	c.AttemptConnection(opts)
 	c.getId()
-	for true {
+	go c.AuctionTimer()
+	for !c.Timeer {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			text := scanner.Text()
@@ -69,6 +49,7 @@ func main() {
 		}
 
 	}
+	fmt.Println("Auction is over")
 }
 
 func (c *BidClient) getId() {
@@ -78,7 +59,17 @@ func (c *BidClient) getId() {
 	}
 	fmt.Printf("my id before assignment %d\n", c.id)
 	c.id = reply.Id
+	c.AuctionDuration = reply.Timestamp
 	fmt.Printf("recieved id %d and my assigned id %d\n", reply.Id, c.id)
+
+}
+
+func (c *BidClient) AuctionTimer() {
+	var i int64
+	for i = 0; i < c.AuctionDuration; i++ {
+		time.Sleep(time.Second)
+	}
+	c.Timeer = true
 
 }
 
@@ -95,9 +86,18 @@ func (c *BidClient) ResolveBid(bid string) {
 	} else {
 		fmt.Println("You did not enter an integer.")
 	}
-}
 
+}
 func (c *BidClient) BidAuction(mybid int64) {
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	if c.conn != nil {
+		// Close the existing connection before creating a new one
+		c.conn.Close()
+	}
+	c.AttemptConnection(opts)
+
 	c.Mybid = mybid
 	fmt.Printf("Bidding %d\nwith Id: %d\n", mybid, c.id)
 	fmt.Println(reflect.TypeOf(mybid))
@@ -109,4 +109,24 @@ func (c *BidClient) BidAuction(mybid int64) {
 	}
 	fmt.Printf("The bid was %v\n", reply.Succes)
 
+}
+
+func (c *BidClient) AttemptConnection(opts []grpc.DialOption) *grpc.ClientConn {
+	var err error
+	for i := 0; i < 2; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		port := int64(5000) + int64(i)
+		fmt.Printf("trying port %d\n", port)
+		c.conn, err = grpc.DialContext(ctx, fmt.Sprintf(":%v", port), opts...)
+		if err != nil {
+			log.Printf("Attempt %d: did not connect: %v\n", i+1, err)
+			time.Sleep(time.Second * 1)
+		} else {
+			c.server = proto.NewAuctionClient(c.conn)
+
+			defer cancel()
+			break
+		}
+	}
+	return c.conn
 }
