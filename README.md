@@ -6,6 +6,7 @@ navigate to "/HW05/Server"
 ### The Client termanal
 navigate to "/HW05/Client"
 ## Running the program 
+### Startup
 For the server terminals run the following commands in 2 separate terminals.
 
 `go run . 0`
@@ -16,10 +17,13 @@ For the server terminal run the following command.
 
 `go run .`
 
+### Running 
+In the client terminal bid with integers, it handles invalid inputs 
+
+Then in either server terminal use `ctrl + c` to simulate a failure for one of the nodes. 
 
 
-
-
+The Auction will end after 30 seconds 
 
 
 
