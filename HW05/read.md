@@ -14,4 +14,4 @@ For the server terminals run the following commands in 2 separate terminals.
 
 For the server terminal run the following command.
 
-go run .
+`go run .`
